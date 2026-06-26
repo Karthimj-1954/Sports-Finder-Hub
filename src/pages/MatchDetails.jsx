@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { auth } from "../firebase";
 
 // We import L to fix the Leaflet default marker icon issue
 import L from "leaflet";
@@ -23,7 +24,8 @@ function MatchDetails() {
   
   // Lazy state initialization to keep render pure and avoid useEffect setState warning
   const [match] = useState(() => {
-    const playRequests = JSON.parse(localStorage.getItem("playRequests")) || [];
+    const uid = auth.currentUser?.uid;
+    const playRequests = JSON.parse(localStorage.getItem(`playRequests_${uid}`)) || [];
     const index = parseInt(id, 10);
     return playRequests[index] || null;
   });
@@ -66,13 +68,14 @@ function MatchDetails() {
 
   const handleJoinRequest = () => {
     // Determine joining player name from profiles
-    const players = JSON.parse(localStorage.getItem("players")) || [];
+    const uid = auth.currentUser?.uid;
+    const players = JSON.parse(localStorage.getItem(`players_${uid}`)) || [];
     let playerName = "Anonymous Player";
     if (players.length > 0) {
       playerName = players[players.length - 1].name; // Get name from last saved profile
     }
 
-    const requests = JSON.parse(localStorage.getItem("requests")) || [];
+    const requests = JSON.parse(localStorage.getItem(`requests_${uid}`)) || [];
     
     // Add to requests list
     const newRequest = {
@@ -85,7 +88,7 @@ function MatchDetails() {
     };
 
     requests.push(newRequest);
-    localStorage.setItem("requests", JSON.stringify(requests));
+    localStorage.setItem(`requests_${uid}`, JSON.stringify(requests));
     
     alert(`Successfully sent request to join this ${match.game} session!`);
     navigate("/notifications");

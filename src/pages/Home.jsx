@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { auth } from "../firebase";
 
 function Home() {
   const animations = [
@@ -21,9 +22,10 @@ function Home() {
     return animations[randomIndex];
   });
 
-  const players = JSON.parse(localStorage.getItem("players")) || [];
-  const requests = JSON.parse(localStorage.getItem("requests")) || [];
-  const playRequests = JSON.parse(localStorage.getItem("playRequests")) || [];
+  const userId = auth.currentUser?.uid;
+  const players = JSON.parse(localStorage.getItem(`players_${userId}`)) || [];
+  const requests = JSON.parse(localStorage.getItem(`requests_${userId}`)) || [];
+  const playRequests = JSON.parse(localStorage.getItem(`playRequests_${userId}`)) || [];
 
   const acceptedRequests = requests.filter(
     (request) => request.status === "Accepted"

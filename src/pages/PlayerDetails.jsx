@@ -1,10 +1,12 @@
 import { useParams, Link } from "react-router-dom";
 import LocationNameMap from "../components/LocationNameMap";
+import { auth } from "../firebase";
 
 function PlayerDetails() {
   const { id } = useParams();
 
-  const players = JSON.parse(localStorage.getItem("players")) || [];
+  const userId = auth.currentUser?.uid;
+  const players = JSON.parse(localStorage.getItem(`players_${userId}`)) || [];
   const player = players[id];
 
   if (!player) {

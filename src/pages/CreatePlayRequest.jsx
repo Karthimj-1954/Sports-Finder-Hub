@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { games, locationTypes, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
+import { auth } from "../firebase";
 
 function CreatePlayRequest() {
   const navigate = useNavigate();
@@ -22,7 +23,8 @@ function CreatePlayRequest() {
       return;
     }
 
-    const playRequests = JSON.parse(localStorage.getItem("playRequests")) || [];
+    const uid = auth.currentUser?.uid;
+    const playRequests = JSON.parse(localStorage.getItem(`playRequests_${uid}`)) || [];
 
     const newRequest = {
       game,
@@ -36,7 +38,7 @@ function CreatePlayRequest() {
     };
 
     playRequests.push(newRequest);
-    localStorage.setItem("playRequests", JSON.stringify(playRequests));
+    localStorage.setItem(`playRequests_${uid}`, JSON.stringify(playRequests));
 
     alert("Play request created successfully!");
     navigate("/");

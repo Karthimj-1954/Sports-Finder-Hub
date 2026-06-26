@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { games, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
+import { auth } from "../firebase";
 
 function FindPartner() {
   const [game, setGame] = useState("");
   const [skill, setSkill] = useState("");
   const [location, setLocation] = useState("");
 
-  const players = JSON.parse(localStorage.getItem("players")) || [];
+  const userId = auth.currentUser?.uid;
+  const players = JSON.parse(localStorage.getItem(`players_${userId}`)) || [];
 
   const filteredPlayers = players.filter((player) => {
     const matchGame =
@@ -27,7 +29,8 @@ function FindPartner() {
   });
 
   const sendRequest = (player) => {
-    const requests = JSON.parse(localStorage.getItem("requests")) || [];
+    const uid = auth.currentUser?.uid;
+    const requests = JSON.parse(localStorage.getItem(`requests_${uid}`)) || [];
 
     const newRequest = {
       player: player.name,
@@ -39,7 +42,7 @@ function FindPartner() {
     };
 
     requests.push(newRequest);
-    localStorage.setItem("requests", JSON.stringify(requests));
+    localStorage.setItem(`requests_${uid}`, JSON.stringify(requests));
 
     alert(`Play request sent to ${player.name}`);
   };

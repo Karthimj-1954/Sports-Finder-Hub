@@ -2,11 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { games, locationTypes, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
+import { auth } from "../firebase";
 
 function Profile() {
   const navigate = useNavigate();
 
-  const [players] = useState(() => JSON.parse(localStorage.getItem("players")) || []);
+  const [players] = useState(() => {
+    const uid = auth.currentUser?.uid;
+    return JSON.parse(localStorage.getItem(`players_${uid}`)) || [];
+  });
   const lastPlayer = players.length > 0 ? players[players.length - 1] : null;
 
   const [name, setName] = useState(lastPlayer ? lastPlayer.name || "" : "");
@@ -26,7 +30,8 @@ function Profile() {
       return;
     }
 
-    const updatedPlayers = JSON.parse(localStorage.getItem("players")) || [];
+    const uid = auth.currentUser?.uid;
+    const updatedPlayers = JSON.parse(localStorage.getItem(`players_${uid}`)) || [];
 
     // Create the updated profile object
     const newProfile = {
@@ -49,7 +54,7 @@ function Profile() {
       updatedPlayers.push(newProfile);
     }
 
-    localStorage.setItem("players", JSON.stringify(updatedPlayers));
+    localStorage.setItem(`players_${uid}`, JSON.stringify(updatedPlayers));
     alert("Profile saved successfully!");
     navigate("/");
   };

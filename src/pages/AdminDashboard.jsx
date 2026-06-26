@@ -1,15 +1,21 @@
 import { useState } from "react";
+import { auth } from "../firebase";
 
 function AdminDashboard() {
-  const [players, setPlayers] = useState(() => JSON.parse(localStorage.getItem("players")) || []);
-  const requests = JSON.parse(localStorage.getItem("requests")) || [];
-  const playRequests = JSON.parse(localStorage.getItem("playRequests")) || [];
+  const userId = auth.currentUser?.uid;
+  const [players, setPlayers] = useState(() => {
+    const uid = auth.currentUser?.uid;
+    return JSON.parse(localStorage.getItem(`players_${uid}`)) || [];
+  });
+  const requests = JSON.parse(localStorage.getItem(`requests_${userId}`)) || [];
+  const playRequests = JSON.parse(localStorage.getItem(`playRequests_${userId}`)) || [];
 
   const deletePlayer = (index) => {
     if (window.confirm("Are you sure you want to delete this player profile?")) {
+      const uid = auth.currentUser?.uid;
       const updatedPlayers = [...players];
       updatedPlayers.splice(index, 1);
-      localStorage.setItem("players", JSON.stringify(updatedPlayers));
+      localStorage.setItem(`players_${uid}`, JSON.stringify(updatedPlayers));
       setPlayers(updatedPlayers);
     }
   };

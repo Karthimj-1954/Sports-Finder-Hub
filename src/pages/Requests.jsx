@@ -1,15 +1,18 @@
 import { useState } from "react";
+import { auth } from "../firebase";
 
 function Requests() {
   const [requests, setRequests] = useState(() => {
-    return JSON.parse(localStorage.getItem("requests")) || [];
+    const uid = auth.currentUser?.uid;
+    return JSON.parse(localStorage.getItem(`requests_${uid}`)) || [];
   });
 
   const updateStatus = (index, status) => {
+    const uid = auth.currentUser?.uid;
     const updatedRequests = [...requests];
     updatedRequests[index].status = status;
     
-    localStorage.setItem("requests", JSON.stringify(updatedRequests));
+    localStorage.setItem(`requests_${uid}`, JSON.stringify(updatedRequests));
     setRequests(updatedRequests);
     alert(`Request ${status} successfully!`);
   };
