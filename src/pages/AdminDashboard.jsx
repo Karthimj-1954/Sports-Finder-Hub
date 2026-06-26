@@ -3,6 +3,7 @@ import { auth } from "../firebase";
 
 function AdminDashboard() {
   const userId = auth.currentUser?.uid;
+  console.log("Current User:", userId);
   const [players, setPlayers] = useState(() => {
     const uid = auth.currentUser?.uid;
     return JSON.parse(localStorage.getItem(`players_${uid}`)) || [];

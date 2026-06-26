@@ -6,6 +6,7 @@ function PlayerDetails() {
   const { id } = useParams();
 
   const userId = auth.currentUser?.uid;
+  console.log("Current User:", userId);
   const players = JSON.parse(localStorage.getItem(`players_${userId}`)) || [];
   const player = players[id];
 

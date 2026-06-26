@@ -23,6 +23,7 @@ function Home() {
   });
 
   const userId = auth.currentUser?.uid;
+  console.log("Current User:", userId);
   const players = JSON.parse(localStorage.getItem(`players_${userId}`)) || [];
   const requests = JSON.parse(localStorage.getItem(`requests_${userId}`)) || [];
   const playRequests = JSON.parse(localStorage.getItem(`playRequests_${userId}`)) || [];

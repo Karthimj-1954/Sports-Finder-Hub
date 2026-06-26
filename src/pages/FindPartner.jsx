@@ -10,6 +10,7 @@ function FindPartner() {
   const [location, setLocation] = useState("");
 
   const userId = auth.currentUser?.uid;
+  console.log("Current User:", userId);
   const players = JSON.parse(localStorage.getItem(`players_${userId}`)) || [];
 
   const filteredPlayers = players.filter((player) => {

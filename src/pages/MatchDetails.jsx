@@ -22,6 +22,9 @@ function MatchDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   
+  const userId = auth.currentUser?.uid;
+  console.log("Current User:", userId);
+
   // Lazy state initialization to keep render pure and avoid useEffect setState warning
   const [match] = useState(() => {
     const uid = auth.currentUser?.uid;

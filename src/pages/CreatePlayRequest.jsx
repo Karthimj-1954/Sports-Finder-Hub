@@ -7,6 +7,9 @@ import { auth } from "../firebase";
 function CreatePlayRequest() {
   const navigate = useNavigate();
 
+  const userId = auth.currentUser?.uid;
+  console.log("Current User:", userId);
+
   const [game, setGame] = useState("");
   const [location, setLocation] = useState("");
   const [locationType, setLocationType] = useState("");

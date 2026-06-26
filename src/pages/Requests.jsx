@@ -2,6 +2,9 @@ import { useState } from "react";
 import { auth } from "../firebase";
 
 function Requests() {
+  const userId = auth.currentUser?.uid;
+  console.log("Current User:", userId);
+
   const [requests, setRequests] = useState(() => {
     const uid = auth.currentUser?.uid;
     return JSON.parse(localStorage.getItem(`requests_${uid}`)) || [];
