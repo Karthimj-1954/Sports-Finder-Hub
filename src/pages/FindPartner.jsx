@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { games, skillLevels } from "../data/games";
+import LocationNameMap from "../components/LocationNameMap";
 
 function FindPartner() {
   const [game, setGame] = useState("");
@@ -152,6 +153,9 @@ function FindPartner() {
                     <span className="text-slate-400 font-medium w-5 text-center">⏰</span>
                     <strong className="text-slate-700 font-semibold">Time:</strong> {player.availabilityTime}
                   </p>
+                </div>
+                <div className="mt-4">
+                  <LocationNameMap locationName={player.location} />
                 </div>
               </div>
 

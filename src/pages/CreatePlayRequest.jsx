@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { games, locationTypes, skillLevels } from "../data/games";
+import LocationNameMap from "../components/LocationNameMap";
 
 function CreatePlayRequest() {
   const navigate = useNavigate();
@@ -81,6 +82,7 @@ function CreatePlayRequest() {
               className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
               required
             />
+            <LocationNameMap locationName={location} />
           </div>
 
           <div>

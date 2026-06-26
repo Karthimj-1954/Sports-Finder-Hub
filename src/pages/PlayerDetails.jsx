@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import LocationNameMap from "../components/LocationNameMap";
 
 function PlayerDetails() {
   const { id } = useParams();
@@ -71,6 +72,18 @@ function PlayerDetails() {
               <p className="text-slate-700 font-semibold">{player.availabilityTime || "Not Specified"}</p>
             </div>
           </div>
+        </div>
+
+        <div className="mt-6">
+          <LocationNameMap locationName={player.location} />
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(player.location)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-body font-semibold mt-3 inline-block w-full bg-orange-50 hover:bg-orange-100 text-[#E65100] py-3.5 px-4 rounded-xl border border-orange-100/50 transition duration-200 text-center text-sm shadow-sm"
+          >
+            🗺️ Open in Google Maps
+          </a>
         </div>
 
         {player.about && (
