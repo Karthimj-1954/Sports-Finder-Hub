@@ -8,6 +8,10 @@ function Navbar() {
 
   const handleLogout = async () => {
     try {
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        localStorage.removeItem(`loginTime_${userId}`);
+      }
       await signOut(auth);
       navigate("/login", { replace: true });
     } catch (error) {

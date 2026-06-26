@@ -17,6 +17,19 @@ function Requests() {
     alert(`Request ${status} successfully!`);
   };
 
+  const handleClearRequests = () => {
+    if (window.confirm("Are you sure you want to clear all requests?")) {
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        localStorage.removeItem(`requests_${uid}`);
+        localStorage.removeItem(`acceptedRequests_${uid}`);
+        localStorage.removeItem(`notifications_${uid}`);
+      }
+      setRequests([]);
+      alert("All requests cleared successfully.");
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case "Accepted":
@@ -30,13 +43,23 @@ function Requests() {
 
   return (
     <div className="max-w-5xl mx-auto mt-10 px-4">
-      <div className="mb-8">
-        <h1 className="font-heading text-3xl font-semibold tracking-tight text-slate-800">
-          Play Requests
-        </h1>
-        <p className="font-body text-sm text-slate-500 mt-1">
-          Respond to invitations and play requests sent by other game partners.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-slate-800">
+            Play Requests
+          </h1>
+          <p className="font-body text-sm text-slate-500 mt-1">
+            Respond to invitations and play requests sent by other game partners.
+          </p>
+        </div>
+        <div>
+          <button
+            onClick={handleClearRequests}
+            className="font-body font-semibold bg-red-600 hover:bg-red-700 text-white py-2.5 px-5 rounded-xl shadow-md hover:shadow-lg transition duration-200 text-sm text-center"
+          >
+            Clear All Requests
+          </button>
+        </div>
       </div>
 
       {requests.length === 0 ? (

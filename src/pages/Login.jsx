@@ -44,7 +44,8 @@ function Login() {
         e.preventDefault();
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            localStorage.setItem(`loginTime_${userCredential.user.uid}`, Date.now().toString());
 
             alert("Login successful!");
 
