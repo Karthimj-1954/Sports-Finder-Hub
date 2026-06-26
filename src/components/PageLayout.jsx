@@ -1,27 +1,16 @@
 import Navbar from "./Navbar";
-import sportsBg from "../assets/sports/sports-bg.png";
 
 function PageLayout({ children, showNavbar = true }) {
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen pb-10"
       style={{
-        backgroundImage: `
-          linear-gradient(
-            rgba(255,255,255,0.75),
-            rgba(255,255,255,0.75)
-          ),
-          url(${sportsBg})
-        `,
-        backgroundSize: "cover",
-        backgroundRepeat: "repeat-y",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
+        background: "linear-gradient(135deg, #FFFDFB 0%, #FFE9D6 100%)",
       }}
     >
       {showNavbar && <Navbar />}
 
-      <div className="min-h-screen">
+      <div>
         {children}
       </div>
     </div>

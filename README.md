@@ -17,11 +17,7 @@ If you are developing a production application, we recommend using TypeScript wi
 
 Project Description
 
-**Sports Finder** is a web-based platform developed to connect sports enthusiasts and help them easily find players, teammates, and sports partners in their locality. The application allows users to create personal sports profiles, search for players based on different sports, create and join matches, and send connection requests to other players.
-
-The platform aims to promote active participation in sports by providing a centralized community where users can interact, organize games, and build sports networks. Sports Finder supports multiple sports such as football, cricket, basketball, badminton, tennis, and volleyball. It also includes features like user authentication, notifications, profile management, location-based player discovery, and match management.
-
-The primary objective of Sports Finder is to simplify the process of finding sports partners and organizing sporting activities, thereby encouraging teamwork, social interaction, and a healthy lifestyle among sports enthusiasts.
+Sports Finder Hub is a local sports and indoor games partner finder platform that helps users discover nearby players for games such as chess, carrom, cards, badminton, table tennis, football, and cricket. The platform allows users to create profiles, set availability, search partners by game type and location, send play requests, and manage community-based sports activities.
 
  File and Folder Description
 

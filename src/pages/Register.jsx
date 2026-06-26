@@ -1,14 +1,18 @@
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 
-import badminton from "../assets/sports/badminton.png";
-import basketball from "../assets/sports/basketball.png";
-import cricket from "../assets/sports/cricket.png";
 import football from "../assets/sports/football.png";
+import cricket from "../assets/sports/cricket.png";
+import basketball from "../assets/sports/basketball.png";
+import badminton from "../assets/sports/badminton.png";
 import tennis from "../assets/sports/tennis.png";
 import volleyball from "../assets/sports/volleyball.png";
+import chess from "../assets/sports/chess.jpg";
+import carrom from "../assets/sports/carrom.jpg";
+import cards from "../assets/sports/cards.jpg";
+import tableTennis from "../assets/sports/table-tennis.jpg";
 
 function Register() {
     const [email, setEmail] = useState("");
@@ -18,16 +22,22 @@ function Register() {
 
     const sportsImages = [
         football,
-        basketball,
         cricket,
+        basketball,
         badminton,
         tennis,
         volleyball,
+        chess,
+        carrom,
+        cards,
+        tableTennis,
     ];
 
     const randomImage = useMemo(() => {
+        // eslint-disable-next-line react-hooks/purity
         const index = Math.floor(Math.random() * sportsImages.length);
         return sportsImages[index];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleRegister = async (e) => {

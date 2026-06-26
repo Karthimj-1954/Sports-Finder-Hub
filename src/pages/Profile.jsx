@@ -1,244 +1,201 @@
 import { useState } from "react";
-import LocationPicker from "../components/LocationPicker";
+import { useNavigate } from "react-router-dom";
+import { games, locationTypes, skillLevels } from "../data/games";
 
 function Profile() {
-  const [name, setName] = useState("");
-  const [sport, setSport] = useState("");
-  const [location, setLocation] = useState("");
-  const [image, setImage] = useState("");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
+  const navigate = useNavigate();
 
-  const requests =
-    JSON.parse(localStorage.getItem("requests")) || [];
+  const [players] = useState(() => JSON.parse(localStorage.getItem("players")) || []);
+  const lastPlayer = players.length > 0 ? players[players.length - 1] : null;
 
-  const acceptedPlayers =
-    JSON.parse(localStorage.getItem("acceptedPlayers")) || [];
+  const [name, setName] = useState(lastPlayer ? lastPlayer.name || "" : "");
+  const [game, setGame] = useState(lastPlayer ? lastPlayer.game || "" : "");
+  const [skill, setSkill] = useState(lastPlayer ? lastPlayer.skill || "" : "");
+  const [availabilityDay, setAvailabilityDay] = useState(lastPlayer ? lastPlayer.availabilityDay || "" : "");
+  const [availabilityTime, setAvailabilityTime] = useState(lastPlayer ? lastPlayer.availabilityTime || "" : "");
+  const [location, setLocation] = useState(lastPlayer ? lastPlayer.location || "" : "");
+  const [locationType, setLocationType] = useState(lastPlayer ? lastPlayer.locationType || "" : "");
+  const [about, setAbout] = useState(lastPlayer ? lastPlayer.about || "" : "");
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
+  const saveProfile = (e) => {
+    e.preventDefault();
 
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onloadend = () => {
-      setImage(reader.result);
-    };
-
-    reader.readAsDataURL(file);
-  };
-
-  const savePlayer = () => {
-    if (!name || !sport || !location) {
-      alert("Please fill name, sport, and location.");
+    if (!name || !game || !skill || !location || !locationType) {
+      alert("Please fill all required fields");
       return;
     }
 
-    const player = {
+    const updatedPlayers = JSON.parse(localStorage.getItem("players")) || [];
+
+    // Create the updated profile object
+    const newProfile = {
       name,
-      sport,
+      game,
+      sport: game,
+      skill,
+      availabilityDay,
+      availabilityTime,
       location,
-      image,
-      latitude,
-      longitude,
+      locationType,
+      about,
     };
 
-    const players =
-      JSON.parse(localStorage.getItem("players")) || [];
+    // If the name matches an existing profile, update it, otherwise push a new one
+    const existingIndex = updatedPlayers.findIndex((p) => p.name.toLowerCase() === name.toLowerCase());
+    if (existingIndex !== -1) {
+      updatedPlayers[existingIndex] = newProfile;
+    } else {
+      updatedPlayers.push(newProfile);
+    }
 
-    players.push(player);
-
-    localStorage.setItem("players", JSON.stringify(players));
-
-    alert("Player saved successfully!");
-
-    setName("");
-    setSport("");
-    setLocation("");
-    setImage("");
-    setLatitude("");
-    setLongitude("");
+    localStorage.setItem("players", JSON.stringify(updatedPlayers));
+    alert("Profile saved successfully!");
+    navigate("/");
   };
 
   return (
-    <div className="max-w-6xl mx-auto mt-10 px-4">
-      <h1 className="text-4xl font-bold text-center mb-10">
-        My Profile
-      </h1>
-
-      {/* Add Player Section */}
-      <div className="bg-white shadow rounded-xl p-6 mb-10">
-        <h2 className="text-2xl font-bold mb-4">
-          Add Player
-        </h2>
-
-        <input
-          type="text"
-          placeholder="Player Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="border p-3 rounded w-full mb-3"
-        />
-
-        <input
-          type="text"
-          placeholder="Sport"
-          value={sport}
-          onChange={(e) => setSport(e.target.value)}
-          className="border p-3 rounded w-full mb-3"
-        />
-
-        <input
-          type="text"
-          placeholder="Location Name"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="border p-3 rounded w-full mb-3"
-        />
-
-        <LocationPicker
-          latitude={latitude}
-          longitude={longitude}
-          setLatitude={setLatitude}
-          setLongitude={setLongitude}
-        />
-
-        {/* Upload Box */}
-        <label className="border-2 border-dashed border-blue-400 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 mb-4">
-          {image ? (
-            <>
-              <img
-                src={image}
-                alt="Player Preview"
-                className="w-24 h-24 rounded-full object-cover mb-2"
-              />
-              <span className="text-sm text-gray-500">
-                Click to change photo
-              </span>
-            </>
-          ) : (
-            <span className="text-gray-600">
-              📷 Click to Upload Player Photo
-            </span>
-          )}
-
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-        </label>
-
-        <button
-          onClick={savePlayer}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Save Player
-        </button>
-      </div>
-
-      {/* Connection Requests */}
-      <h2 className="text-2xl font-bold mb-6">
-        Connection Requests
-      </h2>
-
-      {requests.length === 0 ? (
-        <div className="bg-white p-6 rounded-xl shadow text-center">
-          <p className="text-gray-500">
-            No connection requests yet.
+    <div className="max-w-2xl mx-auto mt-10 px-4">
+      <div className="bg-[#FFF9F2]/90 backdrop-blur-md border border-orange-100/50 p-8 rounded-3xl shadow-2xl text-slate-800">
+        <div className="mb-6">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-slate-800">
+            Create Player Profile
+          </h1>
+          <p className="font-body text-sm text-slate-500 mt-1">
+            Fill in your preferred games and availability to connect with local players.
           </p>
         </div>
-      ) : (
-        <div className="grid md:grid-cols-3 gap-6">
-          {requests.map((request, index) => (
-            <div
-              key={index}
-              className="bg-white shadow rounded-xl p-5"
-            >
-              <h3 className="text-xl font-bold">
-                {request.player}
-              </h3>
 
-              <p>🏆 {request.sport}</p>
-              <p>📍 {request.location}</p>
+        <form onSubmit={saveProfile} className="space-y-6">
+          <div>
+            <label className="font-body font-medium block text-sm text-slate-700 mb-2">Full Name *</label>
+            <input
+              type="text"
+              placeholder="Enter your full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+              required
+            />
+          </div>
 
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={() => {
-                    const accepted =
-                      JSON.parse(
-                        localStorage.getItem("acceptedPlayers")
-                      ) || [];
-
-                    accepted.push(request);
-
-                    localStorage.setItem(
-                      "acceptedPlayers",
-                      JSON.stringify(accepted)
-                    );
-
-                    const updatedRequests =
-                      requests.filter((_, i) => i !== index);
-
-                    localStorage.setItem(
-                      "requests",
-                      JSON.stringify(updatedRequests)
-                    );
-
-                    window.location.reload();
-                  }}
-                  className="bg-green-600 text-white px-4 py-2 rounded"
-                >
-                  Accept
-                </button>
-
-                <button
-                  onClick={() => {
-                    const updatedRequests =
-                      requests.filter((_, i) => i !== index);
-
-                    localStorage.setItem(
-                      "requests",
-                      JSON.stringify(updatedRequests)
-                    );
-
-                    window.location.reload();
-                  }}
-                  className="bg-red-600 text-white px-4 py-2 rounded"
-                >
-                  Delete
-                </button>
-              </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Preferred Game *</label>
+              <select
+                value={game}
+                onChange={(e) => setGame(e.target.value)}
+                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                required
+              >
+                <option value="">Select Preferred Game</option>
+                {games.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Accepted Connections */}
-      <h2 className="text-2xl font-bold mt-10 mb-6">
-        Accepted Connections
-      </h2>
-
-      <div className="grid md:grid-cols-3 gap-6 mb-20">
-        {acceptedPlayers.length === 0 ? (
-          <p>No accepted connections yet.</p>
-        ) : (
-          acceptedPlayers.map((player, index) => (
-            <div
-              key={index}
-              className="bg-white shadow rounded-xl p-5"
-            >
-              <h3 className="text-xl font-bold">
-                {player.player}
-              </h3>
-
-              <p>🏆 {player.sport}</p>
-              <p>📍 {player.location}</p>
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Skill Level *</label>
+              <select
+                value={skill}
+                onChange={(e) => setSkill(e.target.value)}
+                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                required
+              >
+                <option value="">Select Skill Level</option>
+                {skillLevels.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
             </div>
-          ))
-        )}
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Available Days</label>
+              <input
+                type="text"
+                placeholder="e.g. Saturday, Sunday"
+                value={availabilityDay}
+                onChange={(e) => setAvailabilityDay(e.target.value)}
+                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+              />
+            </div>
+
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Available Time</label>
+              <input
+                type="text"
+                placeholder="e.g. 5 PM - 7 PM"
+                value={availabilityTime}
+                onChange={(e) => setAvailabilityTime(e.target.value)}
+                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+              />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Playing Location *</label>
+              <input
+                type="text"
+                placeholder="Enter city or neighborhood"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Playing Location Type *</label>
+              <select
+                value={locationType}
+                onChange={(e) => setLocationType(e.target.value)}
+                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                required
+              >
+                <option value="">Select Location Type</option>
+                {locationTypes.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="font-body font-medium block text-sm text-slate-700 mb-2">About Me</label>
+            <textarea
+              placeholder="Tell other players a bit about yourself, your playstyle, or equipment..."
+              value={about}
+              onChange={(e) => setAbout(e.target.value)}
+              rows="4"
+              className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+            />
+          </div>
+
+          <div className="pt-4 flex gap-4">
+            <button
+              type="submit"
+              className="font-body font-semibold flex-1 bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 text-white py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-200 text-center text-sm"
+            >
+              Save Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="font-body font-semibold px-6 py-4 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-2xl transition duration-200 text-sm text-center"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

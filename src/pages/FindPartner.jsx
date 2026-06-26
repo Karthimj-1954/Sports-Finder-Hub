@@ -1,181 +1,178 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import sportsBg from "../assets/sports/sports-bg.png";
+import { games, skillLevels } from "../data/games";
 
 function FindPartner() {
-  const [sport, setSport] = useState("");
-  const [search, setSearch] = useState("");
+  const [game, setGame] = useState("");
+  const [skill, setSkill] = useState("");
+  const [location, setLocation] = useState("");
 
-  const players =
-    JSON.parse(localStorage.getItem("players")) || [];
+  const players = JSON.parse(localStorage.getItem("players")) || [];
 
   const filteredPlayers = players.filter((player) => {
-    const matchesSport =
-      sport === "" || player.sport === sport;
+    const matchGame =
+      game === "" || player.game === game || player.sport === game;
 
-    const matchesSearch =
-      player.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
+    const matchSkill =
+      skill === "" || player.skill === skill;
 
-    return matchesSport && matchesSearch;
+    const matchLocation =
+      location === "" ||
+      player.location
+        ?.toLowerCase()
+        .includes(location.toLowerCase());
+
+    return matchGame && matchSkill && matchLocation;
   });
 
-  const editPlayer = (index) => {
-    const newName = prompt(
-      "Enter new name",
-      players[index].name
-    );
+  const sendRequest = (player) => {
+    const requests = JSON.parse(localStorage.getItem("requests")) || [];
 
-    if (!newName) return;
+    const newRequest = {
+      player: player.name,
+      game: player.game || player.sport,
+      skill: player.skill,
+      location: player.location,
+      status: "Pending",
+      time: new Date().toLocaleString(),
+    };
 
-    players[index].name = newName;
+    requests.push(newRequest);
+    localStorage.setItem("requests", JSON.stringify(requests));
 
-    localStorage.setItem(
-      "players",
-      JSON.stringify(players)
-    );
-
-    window.location.reload();
+    alert(`Play request sent to ${player.name}`);
   };
 
   return (
-    <div
-      className="min-h-screen px-4 py-10"
-      style={{
-        backgroundImage: `
-          linear-gradient(
-            rgba(255,255,255,0.78),
-            rgba(255,255,255,0.78)
-          ),
-          url(${sportsBg})
-        `,
-        backgroundSize: "cover",
-        backgroundRepeat: "repeat-y",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-      }}
-    >
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-center mb-8">
-          Find Sports Partners
+    <div className="max-w-6xl mx-auto mt-10 px-4">
+      {/* Header */}
+      <div className="text-center mb-10">
+        <h1 className="font-heading text-4xl font-bold tracking-tight text-slate-800">
+          Find Game Partners
         </h1>
+        <p className="font-body text-base leading-relaxed text-slate-500 mt-2">
+          Browse local players, filter by game type or skill level, and send play requests instantly.
+        </p>
+      </div>
 
-        <div className="mb-8 flex flex-col md:flex-row gap-3">
-          <input
-            type="text"
-            placeholder="Search Player"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="border p-3 rounded w-full md:w-64 bg-white/90"
-          />
-
+      {/* Filters Card */}
+      <div className="bg-[#FFF9F2]/80 backdrop-blur-md border border-orange-100/50 p-6 rounded-3xl shadow-xl mb-10 grid md:grid-cols-3 gap-4">
+        <div>
+          <label className="font-body font-semibold block text-xs uppercase tracking-wider text-slate-500 mb-1.5 ml-1">
+            Game Type
+          </label>
           <select
-            value={sport}
-            onChange={(e) => setSport(e.target.value)}
-            className="border p-3 rounded w-full md:w-64 bg-white/90"
+            value={game}
+            onChange={(e) => setGame(e.target.value)}
+            className="font-body font-normal w-full border border-orange-100 p-3 bg-[#FFFDFB] rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition text-sm"
           >
-            <option value="">All Sports</option>
-            <option value="Football">Football</option>
-            <option value="Cricket">Cricket</option>
-            <option value="Badminton">Badminton</option>
-            <option value="Basketball">Basketball</option>
+            <option value="">All Games</option>
+            {games.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {filteredPlayers.length === 0 ? (
-            <div className="bg-white/90 backdrop-blur shadow rounded-xl p-6 text-center md:col-span-3">
-              <p className="text-gray-600">
-                No players found.
-              </p>
-            </div>
-          ) : (
-            filteredPlayers.map((player, index) => (
-              <div
-                key={index}
-                className="bg-white/90 backdrop-blur shadow rounded-xl p-5"
-              >
-                <img
-                  src={
-                    player.image ||
-                    "https://via.placeholder.com/80"
-                  }
-                  alt={player.name}
-                  className="w-20 h-20 rounded-full object-cover mb-4"
-                />
+        <div>
+          <label className="font-body font-semibold block text-xs uppercase tracking-wider text-slate-500 mb-1.5 ml-1">
+            Skill Level
+          </label>
+          <select
+            value={skill}
+            onChange={(e) => setSkill(e.target.value)}
+            className="font-body font-normal w-full border border-orange-100 p-3 bg-[#FFFDFB] rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition text-sm"
+          >
+            <option value="">All Skill Levels</option>
+            {skillLevels.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </div>
 
-                <h3 className="text-xl font-bold">
-                  {player.name}
-                </h3>
-
-                <p>🏆 {player.sport}</p>
-                <p>📍 {player.location}</p>
-
-                <Link
-                  to={`/player/${index}`}
-                  className="text-blue-600 font-semibold block mt-2"
-                >
-                  View Profile
-                </Link>
-
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <button
-                    onClick={() => {
-                      const requests =
-                        JSON.parse(
-                          localStorage.getItem("requests")
-                        ) || [];
-
-                      requests.push({
-                        player: player.name,
-                        sport: player.sport,
-                        location: player.location,
-                      });
-
-                      localStorage.setItem(
-                        "requests",
-                        JSON.stringify(requests)
-                      );
-
-                      alert(
-                        `Request sent to ${player.name}`
-                      );
-                    }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded"
-                  >
-                    Connect
-                  </button>
-
-                  <button
-                    onClick={() => editPlayer(index)}
-                    className="bg-yellow-500 text-white px-4 py-2 rounded"
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const updatedPlayers =
-                        players.filter((_, i) => i !== index);
-
-                      localStorage.setItem(
-                        "players",
-                        JSON.stringify(updatedPlayers)
-                      );
-
-                      window.location.reload();
-                    }}
-                    className="bg-red-600 text-white px-4 py-2 rounded"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+        <div>
+          <label className="font-body font-semibold block text-xs uppercase tracking-wider text-slate-500 mb-1.5 ml-1">
+            Location
+          </label>
+          <input
+            type="text"
+            placeholder="Search by location..."
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="font-body font-normal w-full border border-orange-100 p-3 bg-[#FFFDFB] rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition text-sm"
+          />
         </div>
       </div>
+
+      {/* Players List Grid */}
+      {filteredPlayers.length === 0 ? (
+        <div className="bg-[#FFF9F2]/80 border border-orange-100 rounded-3xl p-12 text-center shadow-lg">
+          <span className="text-4xl">🔍</span>
+          <h3 className="font-heading text-xl font-semibold text-slate-800 mt-4">No Matching Partners Found</h3>
+          <p className="font-body text-base leading-relaxed text-slate-500 mt-2">Try relaxing your filter criteria or searching in a wider location.</p>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-3 gap-6 mb-20">
+          {filteredPlayers.map((player, index) => (
+            <div
+              key={index}
+              className="bg-[#FFF9F2]/90 backdrop-blur-sm border border-orange-100/50 p-6 rounded-2xl shadow-lg hover:-translate-y-1 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-heading text-xl font-semibold text-slate-800 truncate">
+                    {player.name}
+                  </h3>
+                  <span className="font-body font-semibold bg-orange-50 text-[#E65100] text-xs px-2.5 py-1 rounded-full uppercase tracking-wider border border-orange-100">
+                    {player.skill}
+                  </span>
+                </div>
+
+                <div className="font-body text-base leading-relaxed space-y-2 text-slate-600">
+                  <p className="flex items-center gap-2">
+                    <span className="text-slate-400 font-medium w-5 text-center">🎮</span>
+                    <strong className="text-slate-700 font-semibold">Game:</strong> {player.game || player.sport}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="text-slate-400 font-medium w-5 text-center">📍</span>
+                    <strong className="text-slate-700 font-semibold">Location:</strong> {player.location}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="text-slate-400 font-medium w-5 text-center">🏠</span>
+                    <strong className="text-slate-700 font-semibold">Place:</strong> {player.locationType || "Local Court"}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="text-slate-400 font-medium w-5 text-center">🗓</span>
+                    <strong className="text-slate-700 font-semibold">Days:</strong> {player.availabilityDay}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="text-slate-400 font-medium w-5 text-center">⏰</span>
+                    <strong className="text-slate-700 font-semibold">Time:</strong> {player.availabilityTime}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100 flex gap-2">
+                <button
+                  onClick={() => sendRequest(player)}
+                  className="font-body font-semibold flex-1 bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 text-white py-2.5 px-4 rounded-xl shadow transition duration-200 text-center text-sm"
+                >
+                  Send Play Request
+                </button>
+                <Link
+                  to={`/player/${index}`}
+                  className="font-body font-semibold bg-orange-50 hover:bg-orange-100 text-orange-800 py-2.5 px-4 rounded-xl transition duration-200 text-center text-sm"
+                >
+                  Profile
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,180 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { games, locationTypes, skillLevels } from "../data/games";
+
+function CreatePlayRequest() {
+  const navigate = useNavigate();
+
+  const [game, setGame] = useState("");
+  const [location, setLocation] = useState("");
+  const [locationType, setLocationType] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [playersNeeded, setPlayersNeeded] = useState("");
+  const [skill, setSkill] = useState("");
+
+  const createRequest = (e) => {
+    e.preventDefault();
+
+    if (!game || !location || !locationType || !date || !time || !playersNeeded || !skill) {
+      alert("Please fill all fields");
+      return;
+    }
+
+    const playRequests = JSON.parse(localStorage.getItem("playRequests")) || [];
+
+    const newRequest = {
+      game,
+      location,
+      locationType,
+      date,
+      time,
+      playersNeeded: parseInt(playersNeeded, 10),
+      skill,
+      status: "Open",
+    };
+
+    playRequests.push(newRequest);
+    localStorage.setItem("playRequests", JSON.stringify(playRequests));
+
+    alert("Play request created successfully!");
+    navigate("/");
+  };
+
+  return (
+    <div className="max-w-xl mx-auto mt-10 px-4">
+      <div className="bg-[#FFF9F2]/90 backdrop-blur-md border border-orange-100/50 p-8 rounded-3xl shadow-2xl text-slate-800">
+        <div className="mb-6">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-slate-800">
+            Create Play Request
+          </h1>
+          <p className="font-body text-sm text-slate-500 mt-1">
+            Host a game session and invite players to join you.
+          </p>
+        </div>
+
+        <form onSubmit={createRequest} className="space-y-4">
+          <div>
+            <label className="font-body font-medium block text-sm text-slate-700 mb-1.5">Game *</label>
+            <select
+              value={game}
+              onChange={(e) => setGame(e.target.value)}
+              className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+              required
+            >
+              <option value="">Select Game</option>
+              {games.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="font-body font-medium block text-sm text-slate-700 mb-1.5">Location *</label>
+            <input
+              type="text"
+              placeholder="e.g. Community Center or Local Ground"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="font-body font-medium block text-sm text-slate-700 mb-1.5">Location Type *</label>
+            <select
+              value={locationType}
+              onChange={(e) => setLocationType(e.target.value)}
+              className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+              required
+            >
+              <option value="">Select Location Type</option>
+              {locationTypes.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-1.5">Date *</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-1.5">Time *</label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-1.5">Players Needed *</label>
+              <input
+                type="number"
+                min="1"
+                placeholder="Number of players"
+                value={playersNeeded}
+                onChange={(e) => setPlayersNeeded(e.target.value)}
+                className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-1.5">Preferred Skill Level *</label>
+              <select
+                value={skill}
+                onChange={(e) => setSkill(e.target.value)}
+                className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                required
+              >
+                <option value="">Preferred Skill Level</option>
+                {skillLevels.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="pt-4 flex gap-4">
+            <button
+              type="submit"
+              className="font-body font-semibold flex-1 bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 text-white py-3.5 px-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 text-center text-sm"
+            >
+              Create Request
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="font-body font-semibold px-6 py-3.5 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-xl transition duration-200 text-sm text-center"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default CreatePlayRequest;

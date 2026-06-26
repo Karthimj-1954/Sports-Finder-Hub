@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "sports-finder-hub-k19j4",
     "public": "dist",
     "ignore": [
       "firebase.json",
