@@ -126,26 +126,132 @@ function Home() {
     <div className="max-w-6xl mx-auto mt-10 px-4 mb-20">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-orange-500 to-amber-600 rounded-3xl p-8 md:p-12 text-white shadow-2xl relative overflow-hidden mb-10">
-        <div className="relative z-10 max-w-xl">
-          <h1 className="font-heading text-4xl md:text-5xl font-extrabold tracking-tight">
-            Connect & Play with Local Players
-          </h1>
-          <p className="font-body text-base md:text-lg text-orange-100 mt-4 leading-relaxed">
-            Find nearby sports partners, join open play sessions, and establish coordinates-based games in your community.
-          </p>
-          <div className="flex flex-wrap gap-4 mt-8">
-            <Link
-              to="/partner"
-              className="font-body font-semibold bg-white text-[#D35400] px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition duration-200 text-sm text-center"
-            >
-              🔍 Find Partners
-            </Link>
-            <Link
-              to="/create"
-              className="font-body font-semibold bg-orange-700/50 hover:bg-orange-700/80 text-white border border-orange-300/30 px-6 py-3 rounded-xl transition duration-200 text-sm text-center"
-            >
-              ➕ Host Session
-            </Link>
+        {/* Background Decorative Blobs */}
+        <div className="absolute top-[-20%] right-[-10%] w-[350px] h-[350px] rounded-full bg-white/5 blur-2xl pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[30%] w-[200px] h-[200px] rounded-full bg-amber-500/20 blur-xl pointer-events-none" />
+
+        <div className="relative z-10 grid lg:grid-cols-12 gap-8 items-center">
+          {/* Left content (unchanged) */}
+          <div className="lg:col-span-7 max-w-xl">
+            <h1 className="font-heading text-4xl md:text-5xl font-extrabold tracking-tight">
+              Connect & Play with Local Players
+            </h1>
+            <p className="font-body text-base md:text-lg text-orange-100 mt-4 leading-relaxed">
+              Find nearby sports partners, join open play sessions, and establish coordinates-based games in your community.
+            </p>
+            <div className="flex flex-wrap gap-4 mt-8">
+              <Link
+                to="/partner"
+                className="font-body font-semibold bg-white text-[#D35400] px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition duration-200 text-sm text-center"
+              >
+                🔍 Find Partners
+              </Link>
+              <Link
+                to="/create"
+                className="font-body font-semibold bg-orange-700/50 hover:bg-orange-700/80 text-white border border-orange-300/30 px-6 py-3 rounded-xl transition duration-200 text-sm text-center"
+              >
+                ➕ Host Session
+              </Link>
+            </div>
+          </div>
+
+          {/* Right content (new animated right-side illustration) */}
+          <div className="lg:col-span-5 relative w-full flex flex-col sm:flex-row gap-6 items-center justify-center min-h-[320px] mt-6 lg:mt-0">
+            {/* Inline CSS animations */}
+            <style>{`
+              @keyframes float-y-1 {
+                0%, 100% { transform: translateY(0) scale(1); }
+                50% { transform: translateY(-12px) scale(1.02); }
+              }
+              @keyframes float-y-2 {
+                0%, 100% { transform: translateY(0) scale(1); }
+                50% { transform: translateY(12px) scale(0.98); }
+              }
+              @keyframes float-random-1 {
+                0%, 100% { transform: translate(0, 0) rotate(0deg); }
+                33% { transform: translate(6px, -8px) rotate(8deg); }
+                66% { transform: translate(-4px, 4px) rotate(-6deg); }
+              }
+              @keyframes float-random-2 {
+                0%, 100% { transform: translate(0, 0) rotate(0deg); }
+                50% { transform: translate(-8px, -12px) rotate(-12deg); }
+              }
+              @keyframes float-random-3 {
+                0%, 100% { transform: translate(0, 0) rotate(0deg); }
+                50% { transform: translate(10px, 8px) rotate(15deg); }
+              }
+              .animate-card-1 {
+                animation: float-y-1 6s ease-in-out infinite;
+              }
+              .animate-card-2 {
+                animation: float-y-2 7s ease-in-out infinite;
+              }
+              .animate-elem-1 {
+                animation: float-random-1 8s ease-in-out infinite;
+              }
+              .animate-elem-2 {
+                animation: float-random-2 9s ease-in-out infinite;
+              }
+              .animate-elem-3 {
+                animation: float-random-3 10s ease-in-out infinite;
+              }
+            `}</style>
+
+            {/* Floating Sports Elements */}
+            <div className="absolute top-2 left-6 text-3xl animate-elem-1 opacity-80 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]">⚽</div>
+            <div className="absolute bottom-6 right-8 text-4xl animate-elem-2 opacity-80 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]">🏸</div>
+            <div className="absolute top-1/2 left-[42%] text-3xl animate-elem-3 opacity-90 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]">♟️</div>
+            <div className="absolute top-10 right-4 text-2xl animate-elem-1 opacity-70 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]">🏀</div>
+
+            {/* Indoor Games Card */}
+            <div className="animate-card-1 w-full sm:w-[200px] bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-5 shadow-2xl hover:bg-white/15 hover:scale-105 hover:border-white/30 transition-all duration-300 cursor-pointer">
+              <span className="text-2xl mb-2 block">🏠</span>
+              <h4 className="font-heading text-sm font-extrabold uppercase tracking-wider text-orange-50 mb-4">
+                Indoor Games
+              </h4>
+              <div className="grid grid-cols-3 gap-2.5">
+                {[
+                  { icon: "♟️", name: "Chess" },
+                  { icon: "🔴", name: "Carrom" },
+                  { icon: "🏓", name: "Table Tennis" },
+                  { icon: "🏸", name: "Badminton" },
+                  { icon: "🃏", name: "Cards" },
+                ].map((game, i) => (
+                  <div
+                    key={i}
+                    className="w-10 h-10 rounded-full bg-white/90 shadow-md border border-orange-100 flex items-center justify-center text-lg hover:scale-110 hover:-rotate-12 transition-transform duration-250"
+                    title={game.name}
+                  >
+                    {game.icon}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Outdoor Games Card */}
+            <div className="animate-card-2 w-full sm:w-[200px] bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-5 shadow-2xl hover:bg-white/15 hover:scale-105 hover:border-white/30 transition-all duration-300 cursor-pointer mt-6 sm:mt-12">
+              <span className="text-2xl mb-2 block">🌳</span>
+              <h4 className="font-heading text-sm font-extrabold uppercase tracking-wider text-orange-50 mb-4">
+                Outdoor Games
+              </h4>
+              <div className="grid grid-cols-3 gap-2.5">
+                {[
+                  { icon: "⚽", name: "Football" },
+                  { icon: "🏏", name: "Cricket" },
+                  { icon: "🏀", name: "Basketball" },
+                  { icon: "🎾", name: "Tennis" },
+                  { icon: "🏐", name: "Volleyball" },
+                ].map((game, i) => (
+                  <div
+                    key={i}
+                    className="w-10 h-10 rounded-full bg-white/90 shadow-md border border-orange-100 flex items-center justify-center text-lg hover:scale-110 hover:-rotate-12 transition-transform duration-250"
+                    title={game.name}
+                  >
+                    {game.icon}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
