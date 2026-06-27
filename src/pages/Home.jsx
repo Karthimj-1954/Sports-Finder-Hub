@@ -4,6 +4,21 @@ import { auth, db } from "../firebase";
 import { collection, getDocs, query, where, deleteDoc, doc, onSnapshot } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const year = parts[0];
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    if (monthIndex >= 0 && monthIndex < 12) {
+      return `${day} ${months[monthIndex]} ${year}`;
+    }
+  }
+  return dateStr;
+};
+
 function Home() {
   const [stats, setStats] = useState({
     activePartners: 0,
@@ -412,7 +427,7 @@ function Home() {
                     <div>
                       <h4 className="font-heading text-lg font-bold text-slate-800">{session.game}</h4>
                       <p className="font-body text-sm text-slate-500 mt-1">
-                        🗓 {session.date} | ⏱ {session.time}
+                        🗓 {formatDate(session.date)} | ⏱ {session.time}
                       </p>
                       <p className="font-body text-xs text-slate-455">
                         📍 {session.location} ({session.locationType || "Local Court"})

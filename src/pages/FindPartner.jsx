@@ -99,6 +99,7 @@ function FindPartner() {
 
     const matchTime =
       availTime === "" ||
+      player.availabilityPeriod === availTime ||
       player.availabilityTimes?.includes(availTime) ||
       player.availabilityTime?.includes(availTime) ||
       player.availabilityTimeStr?.toLowerCase().includes(availTime.toLowerCase());
@@ -342,12 +343,12 @@ function FindPartner() {
                       <strong className="text-slate-700 font-semibold">Place:</strong> {player.locationType || "Local Court"}
                     </p>
                     <p className="flex items-center gap-2">
-                      <span className="text-slate-400 font-medium w-5 text-center">🗓</span>
-                      <strong className="text-slate-700 font-semibold">Days:</strong> {player.availabilityDays?.join(", ") || player.availabilityDay}
+                      <span className="text-slate-400 font-medium w-5 text-center">📅</span>
+                      <strong className="text-slate-700 font-semibold">Availability:</strong> {player.availabilityPeriod || player.availabilityTimeStr || "Morning"}
                     </p>
                     <p className="flex items-center gap-2">
                       <span className="text-slate-400 font-medium w-5 text-center">⏰</span>
-                      <strong className="text-slate-700 font-semibold">Time:</strong> {player.availabilityTimes?.join(", ") || player.availabilityTime}
+                      <strong className="text-slate-700 font-semibold">Preferred Time:</strong> {player.preferredTime || "12:20 PM"}
                     </p>
                   </div>
                   <div className="mt-4">

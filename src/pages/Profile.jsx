@@ -7,13 +7,31 @@ import { collection, query, where, getDocs, addDoc, updateDoc, doc } from "fireb
 import { toast } from "react-hot-toast";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const TIMES_OF_DAY = ["Morning", "Afternoon", "Evening", "Night"];
-const SLOT_LABELS = {
-  Morning: "Morning (6 AM - 12 PM)",
-  Afternoon: "Afternoon (12 PM - 5 PM)",
-  Evening: "Evening (5 PM - 9 PM)",
-  Night: "Night (9 PM - 6 AM)"
-};
+
+function formatTimeTo12Hour(time24) {
+  if (!time24) return "";
+  const [hours, minutes] = time24.split(":");
+  const h = parseInt(hours, 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const formattedHour = h % 12 || 12;
+  return `${formattedHour}:${minutes} ${ampm}`;
+}
+
+function convert12HourTo24Hour(time12) {
+  if (!time12) return "";
+  const match = time12.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+  if (!match) return "";
+  let [, hoursStr, minutesStr, ampm] = match;
+  let hours = parseInt(hoursStr, 10);
+  ampm = ampm.toUpperCase();
+  if (ampm === "PM" && hours < 12) {
+    hours += 12;
+  } else if (ampm === "AM" && hours === 12) {
+    hours = 0;
+  }
+  const hh = String(hours).padStart(2, "0");
+  return `${hh}:${minutesStr}`;
+}
 
 function Profile() {
   const navigate = useNavigate();
@@ -31,7 +49,9 @@ function Profile() {
   const [game, setGame] = useState("");
   const [skill, setSkill] = useState("");
   const [availabilityDays, setAvailabilityDays] = useState([]);
-  const [availabilityTimes, setAvailabilityTimes] = useState([]);
+  const [availabilityPeriod, setAvailabilityPeriod] = useState("");
+  const [preferredTime, setPreferredTime] = useState("");
+  const [rawTime, setRawTime] = useState("");
   const [location, setLocation] = useState("");
   const [locationType, setLocationType] = useState("");
   const [about, setAbout] = useState("");
@@ -70,7 +90,10 @@ function Profile() {
           setGame(data.game || data.sport || "");
           setSkill(data.skill || data.skillLevel || "");
           setAvailabilityDays(data.availabilityDays || (data.availabilityDay ? data.availabilityDay.split(", ") : []));
-          setAvailabilityTimes(data.availabilityTime || data.availabilityTimes || (data.availabilityTimeStr ? data.availabilityTimeStr.split(", ") : []));
+          setAvailabilityPeriod(data.availabilityPeriod || "");
+          const pTime = data.preferredTime || "";
+          setPreferredTime(pTime);
+          setRawTime(convert12HourTo24Hour(pTime));
           setLocation(data.location || "");
           setLocationType(data.locationType || "");
           setAbout(data.about || "");
@@ -96,12 +119,6 @@ function Profile() {
   const toggleDay = (day) => {
     setAvailabilityDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
-  };
-
-  const toggleTime = (time) => {
-    setAvailabilityTimes((prev) =>
-      prev.includes(time) ? prev.filter((t) => t !== time) : [...prev, time]
     );
   };
 
@@ -132,9 +149,11 @@ function Profile() {
       skill: skill, // backward compatibility
       availabilityDays,
       availabilityDay: availabilityDays.join(", "), // backward compatibility
-      availabilityTime: availabilityTimes,
-      availabilityTimes: availabilityTimes,
-      availabilityTimeStr: availabilityTimes.join(", "), // backward compatibility
+      availabilityPeriod,
+      preferredTime,
+      availabilityTime: [availabilityPeriod],
+      availabilityTimes: [availabilityPeriod],
+      availabilityTimeStr: availabilityPeriod,
       location,
       locationType,
       latitude: latitude || 0,
@@ -291,26 +310,35 @@ function Profile() {
             </div>
           </div>
 
-          <div>
-            <label className="font-body font-medium block text-sm text-slate-700 mb-2">Available Time Slots</label>
-            <div className="flex flex-wrap gap-2">
-              {TIMES_OF_DAY.map((tSlot) => {
-                const isSelected = availabilityTimes.includes(tSlot);
-                return (
-                  <button
-                    key={tSlot}
-                    type="button"
-                    onClick={() => toggleTime(tSlot)}
-                    className={`font-body font-semibold py-2.5 px-4 rounded-xl text-xs border transition duration-200 ${
-                      isSelected
-                        ? "bg-orange-600 border-orange-600 text-white shadow"
-                        : "bg-orange-50/50 border-orange-100 text-orange-800 hover:bg-orange-100"
-                    }`}
-                  >
-                    {SLOT_LABELS[tSlot] || tSlot}
-                  </button>
-                );
-              })}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Availability Period *</label>
+              <select
+                value={availabilityPeriod}
+                onChange={(e) => setAvailabilityPeriod(e.target.value)}
+                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                required
+              >
+                <option value="">Select Availability Period</option>
+                <option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option>
+                <option value="Evening">Evening</option>
+                <option value="Night">Night</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Preferred Time *</label>
+              <input
+                type="time"
+                value={rawTime}
+                onChange={(e) => {
+                  setRawTime(e.target.value);
+                  setPreferredTime(formatTimeTo12Hour(e.target.value));
+                }}
+                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                required
+              />
             </div>
           </div>
 

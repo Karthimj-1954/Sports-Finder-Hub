@@ -6,6 +6,16 @@ import { auth, db } from "../firebase";
 import { collection, addDoc, getDocs, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 
+function formatTimeTo12Hour(time24) {
+  if (!time24) return "";
+  if (time24.includes("AM") || time24.includes("PM")) return time24;
+  const [hours, minutes] = time24.split(":");
+  const h = parseInt(hours, 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const formattedHour = h % 12 || 12;
+  return `${formattedHour}:${minutes} ${ampm}`;
+}
+
 function CreatePlayRequest() {
   const navigate = useNavigate();
 
@@ -61,7 +71,7 @@ function CreatePlayRequest() {
       latitude: latitude || 0,
       longitude: longitude || 0,
       date,
-      time,
+      time: formatTimeTo12Hour(time),
       playersNeeded: parseInt(playersNeeded, 10),
       skill,
       status: "Open",

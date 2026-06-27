@@ -266,20 +266,13 @@ function PlayerDetails() {
 
               <div className="bg-[#FFFDFB] border border-orange-100 p-5 rounded-2xl shadow-sm">
                 <span className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-3">
-                  Time Slots
+                  Availability / Preferred Time
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {player.availabilityTimes && player.availabilityTimes.length > 0 ? (
-                    player.availabilityTimes.map((t) => (
-                      <span key={t} className="font-body text-xs font-semibold bg-orange-100 text-[#8E2F00] px-3 py-1 rounded-lg">
-                        {t}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="font-body text-sm text-slate-500 font-semibold">
-                      {player.availabilityTimeStr || player.availabilityTime || "N/A"}
-                    </span>
-                  )}
+                  <span className="font-body text-sm text-slate-700 font-semibold">
+                    {player.availabilityPeriod || player.availabilityTimeStr || "Morning"}
+                    {player.preferredTime ? ` (${player.preferredTime})` : ""}
+                  </span>
                 </div>
               </div>
             </div>

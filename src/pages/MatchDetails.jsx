@@ -5,6 +5,21 @@ import { auth, db } from "../firebase";
 import { doc, getDoc, addDoc, query, collection, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const year = parts[0];
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    if (monthIndex >= 0 && monthIndex < 12) {
+      return `${day} ${months[monthIndex]} ${year}`;
+    }
+  }
+  return dateStr;
+};
+
 function MatchDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -151,7 +166,7 @@ function MatchDetails() {
             </div>
             <div>
               <span className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</span>
-              <p className="font-heading text-base font-bold text-slate-700 mt-1">{match.date}</p>
+              <p className="font-heading text-base font-bold text-slate-700 mt-1">{formatDate(match.date)}</p>
             </div>
             <div>
               <span className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Time</span>
