@@ -26,7 +26,7 @@ function CreatePlayRequest() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const catSnap = await getDocs(collection(db, "sportsCategories"));
+        const catSnap = await getDocs(collection(db, "categories"));
         if (!catSnap.empty) {
           setGamesList(catSnap.docs.map((docSnap) => docSnap.data().name));
         }
