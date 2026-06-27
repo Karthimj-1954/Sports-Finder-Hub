@@ -22,7 +22,7 @@ function AdminDashboard() {
 
   // Lists
   const [users, setUsers] = useState([]);
-  const [profiles, setProfiles] = useState([]);
+  const [players, setPlayers] = useState([]);
   const [requests, setRequests] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [communities, setCommunities] = useState([]);
@@ -33,22 +33,21 @@ function AdminDashboard() {
   const [newCategoryName, setNewCategoryName] = useState("");
 
   // Debug logging
-  console.log("Users:", users);
-  console.log("Profiles:", profiles);
+  console.log("Players:", players);
   console.log("Requests:", requests);
+  console.log("Users:", users);
   console.log("Sessions:", sessions);
-  console.log("Communities:", communities);
 
   useEffect(() => {
     let usersLoaded = false;
-    let profilesLoaded = false;
+    let playersLoaded = false;
     let requestsLoaded = false;
     let sessionsLoaded = false;
     let communitiesLoaded = false;
     let categoriesLoaded = false;
 
     const checkFinished = () => {
-      if (usersLoaded && profilesLoaded && requestsLoaded && sessionsLoaded && communitiesLoaded && categoriesLoaded) {
+      if (usersLoaded && playersLoaded && requestsLoaded && sessionsLoaded && communitiesLoaded && categoriesLoaded) {
         setLoading(false);
       }
     };
@@ -75,24 +74,24 @@ function AdminDashboard() {
       }
     );
 
-    const unsubProfiles = onSnapshot(
+    const unsubPlayers = onSnapshot(
       collection(db, "players"),
       (snapshot) => {
         Promise.resolve().then(() => {
-          setProfiles(
+          setPlayers(
             snapshot.docs.map((docSnap) => ({
               id: docSnap.id,
               ...docSnap.data(),
             }))
           );
           setTotalProfiles(snapshot.size);
-          profilesLoaded = true;
+          playersLoaded = true;
           checkFinished();
         });
       },
       (error) => {
-        console.error("Error listening to profiles: ", error);
-        profilesLoaded = true;
+        console.error("Error listening to players: ", error);
+        playersLoaded = true;
         checkFinished();
       }
     );
@@ -186,7 +185,7 @@ function AdminDashboard() {
 
     return () => {
       unsubUsers();
-      unsubProfiles();
+      unsubPlayers();
       unsubRequests();
       unsubSessions();
       unsubCommunities();
@@ -267,69 +266,55 @@ function AdminDashboard() {
   };
 
   // Preparation for Chart 1: Users per sport
-  const sportsCounts = {};
-  profiles.forEach((p) => {
-    const sport = p.game || p.sport || "Unknown";
-    sportsCounts[sport] = (sportsCounts[sport] || 0) + 1;
+  const sportCounts = {};
+  players.forEach((player) => {
+    const sport = player.sport || player.game || "Unknown";
+    sportCounts[sport] = (sportCounts[sport] || 0) + 1;
   });
 
-  const sportsChartData = {
-    labels: Object.keys(sportsCounts),
+  const playersChartData = {
+    labels: Object.keys(sportCounts),
     datasets: [
       {
-        label: "Number of Players",
-        data: Object.values(sportsCounts),
+        label: "Players",
+        data: Object.values(sportCounts),
         backgroundColor: [
-          "rgba(211, 84, 0, 0.6)",
-          "rgba(230, 126, 34, 0.6)",
-          "rgba(241, 196, 15, 0.6)",
-          "rgba(46, 204, 113, 0.6)",
-          "rgba(52, 152, 219, 0.6)",
-          "rgba(155, 89, 182, 0.6)",
-          "rgba(26, 188, 156, 0.6)",
+          "#FF6B35",
+          "#4CAF50",
+          "#2196F3",
+          "#FFC107",
+          "#9C27B0",
+          "#E91E63",
         ],
-        borderColor: [
-          "rgba(211, 84, 0, 1)",
-          "rgba(230, 126, 34, 1)",
-          "rgba(241, 196, 15, 1)",
-          "rgba(46, 204, 113, 1)",
-          "rgba(52, 152, 219, 1)",
-          "rgba(155, 89, 182, 1)",
-          "rgba(26, 188, 156, 1)",
-        ],
-        borderWidth: 1,
       },
     ],
   };
 
   // Preparation for Chart 2: Request status distribution
-  const statusCounts = { Pending: 0, Accepted: 0, Declined: 0, Completed: 0, Cancelled: 0 };
-  requests.forEach((r) => {
-    const status = r.status || "Pending";
-    statusCounts[status] = (statusCounts[status] || 0) + 1;
+  const statusCounts = {
+    Pending: 0,
+    Accepted: 0,
+    Declined: 0,
+    Completed: 0,
+  };
+  requests.forEach((request) => {
+    const status = request.status || "Pending";
+    if (statusCounts[status] !== undefined) {
+      statusCounts[status]++;
+    }
   });
 
   const requestChartData = {
     labels: Object.keys(statusCounts),
     datasets: [
       {
-        label: "Requests Status",
         data: Object.values(statusCounts),
         backgroundColor: [
-          "rgba(241, 196, 15, 0.6)", // Pending (yellow)
-          "rgba(46, 204, 113, 0.6)", // Accepted (green)
-          "rgba(231, 76, 60, 0.6)",  // Declined (red)
-          "rgba(52, 152, 219, 0.6)",  // Completed (blue)
-          "rgba(149, 165, 166, 0.6)", // Cancelled (grey)
+          "#FFC107",
+          "#4CAF50",
+          "#F44336",
+          "#2196F3",
         ],
-        borderColor: [
-          "rgba(241, 196, 15, 1)",
-          "rgba(46, 204, 113, 1)",
-          "rgba(231, 76, 60, 1)",
-          "rgba(52, 152, 219, 1)",
-          "rgba(149, 165, 166, 1)",
-        ],
-        borderWidth: 1,
       },
     ],
   };
@@ -410,9 +395,9 @@ function AdminDashboard() {
           <div className="bg-[#FFF9F2]/90 border border-orange-100/50 p-6 rounded-3xl shadow-lg">
             <h3 className="font-heading text-lg font-bold text-slate-800 mb-4 text-center">Registered Players Per Sport</h3>
             <div className="h-[300px] flex items-center justify-center">
-              {profiles.length > 0 ? (
+              {players.length > 0 ? (
                 <Bar
-                  data={sportsChartData}
+                  data={playersChartData}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
@@ -420,7 +405,7 @@ function AdminDashboard() {
                   }}
                 />
               ) : (
-                <p className="font-body text-slate-400 text-sm">No data available.</p>
+                <p className="font-body text-slate-400 text-sm">No players registered yet.</p>
               )}
             </div>
           </div>
@@ -432,7 +417,7 @@ function AdminDashboard() {
               {requests.length > 0 ? (
                 <Pie data={requestChartData} options={{ responsive: true, maintainAspectRatio: false }} />
               ) : (
-                <p className="font-body text-slate-400 text-sm">No data available.</p>
+                <p className="font-body text-slate-400 text-sm">No requests available.</p>
               )}
             </div>
           </div>
@@ -441,7 +426,7 @@ function AdminDashboard() {
 
       {activeTab === "players" && (
         <div className="bg-[#FFF9F2]/90 border border-orange-100/50 rounded-3xl shadow-lg overflow-hidden">
-          {profiles.length === 0 ? (
+          {players.length === 0 ? (
             <div className="p-8 text-center text-slate-400 font-body">No data available.</div>
           ) : (
             <div className="overflow-x-auto">
@@ -456,7 +441,7 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="font-body text-sm text-slate-700 divide-y divide-orange-50">
-                  {profiles.map((player) => (
+                  {players.map((player) => (
                     <tr key={player.id} className="hover:bg-orange-50/20 transition">
                       <td className="py-4 px-6 font-bold text-slate-800">{player.name}</td>
                       <td className="py-4 px-6">{player.game || player.sport}</td>
@@ -583,7 +568,7 @@ function AdminDashboard() {
                   placeholder="e.g. Swimming, Archery"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
-                  className="font-body w-full border border-orange-100 p-3 bg-[#FFFDFB] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="font-body w-full border border-orange-100 p-3 bg-[#FFFDFB] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
                   required
                 />
               </div>
