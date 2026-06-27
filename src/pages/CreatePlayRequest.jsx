@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { games, locationTypes, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
+import { collection, addDoc } from "firebase/firestore";
 
 function CreatePlayRequest() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ function CreatePlayRequest() {
   const [playersNeeded, setPlayersNeeded] = useState("");
   const [skill, setSkill] = useState("");
 
-  const createRequest = (e) => {
+  const createRequest = async (e) => {
     e.preventDefault();
 
     if (!game || !location || !locationType || !date || !time || !playersNeeded || !skill) {
@@ -27,9 +28,15 @@ function CreatePlayRequest() {
     }
 
     const uid = auth.currentUser?.uid;
-    const playRequests = JSON.parse(localStorage.getItem(`playRequests_${uid}`)) || [];
+    const email = auth.currentUser?.email;
+    if (!uid) {
+      alert("Please login to create a play request");
+      return;
+    }
 
     const newRequest = {
+      creatorId: uid,
+      creatorEmail: email || "",
       game,
       location,
       locationType,
@@ -38,13 +45,17 @@ function CreatePlayRequest() {
       playersNeeded: parseInt(playersNeeded, 10),
       skill,
       status: "Open",
+      createdAt: new Date().toISOString(),
     };
 
-    playRequests.push(newRequest);
-    localStorage.setItem(`playRequests_${uid}`, JSON.stringify(playRequests));
-
-    alert("Play request created successfully!");
-    navigate("/");
+    try {
+      await addDoc(collection(db, "playRequests"), newRequest);
+      alert("Play request created successfully!");
+      navigate("/");
+    } catch (error) {
+      console.error("Error creating play request: ", error);
+      alert("Failed to create play request: " + error.message);
+    }
   };
 
   return (

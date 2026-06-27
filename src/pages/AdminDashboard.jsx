@@ -1,25 +1,56 @@
-import { useState } from "react";
-import { auth } from "../firebase";
+import { useState, useEffect } from "react";
+import { auth, db } from "../firebase";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 
 function AdminDashboard() {
   const userId = auth.currentUser?.uid;
   console.log("Current User:", userId);
-  const [players, setPlayers] = useState(() => {
-    const uid = auth.currentUser?.uid;
-    return JSON.parse(localStorage.getItem(`players_${uid}`)) || [];
-  });
-  const requests = JSON.parse(localStorage.getItem(`requests_${userId}`)) || [];
-  const playRequests = JSON.parse(localStorage.getItem(`playRequests_${userId}`)) || [];
 
-  const deletePlayer = (index) => {
+  const [players, setPlayers] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [playRequests, setPlayRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        const playersSnap = await getDocs(collection(db, "players"));
+        setPlayers(playersSnap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
+
+        const requestsSnap = await getDocs(collection(db, "requests"));
+        setRequests(requestsSnap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
+
+        const playRequestsSnap = await getDocs(collection(db, "playRequests"));
+        setPlayRequests(playRequestsSnap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
+      } catch (error) {
+        console.error("Error loading admin stats: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAllData();
+  }, []);
+
+  const deletePlayer = async (playerId) => {
     if (window.confirm("Are you sure you want to delete this player profile?")) {
-      const uid = auth.currentUser?.uid;
-      const updatedPlayers = [...players];
-      updatedPlayers.splice(index, 1);
-      localStorage.setItem(`players_${uid}`, JSON.stringify(updatedPlayers));
-      setPlayers(updatedPlayers);
+      try {
+        await deleteDoc(doc(db, "players", playerId));
+        setPlayers((prev) => prev.filter((p) => p.id !== playerId));
+        alert("Player profile deleted successfully.");
+      } catch (error) {
+        console.error("Error deleting player: ", error);
+        alert("Failed to delete player profile: " + error.message);
+      }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
+        Loading admin metrics...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto mt-10 px-4">
@@ -89,8 +120,8 @@ function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="font-body text-sm text-slate-700 divide-y divide-orange-50">
-                {players.map((player, index) => (
-                  <tr key={index} className="hover:bg-orange-50/20 transition">
+                {players.map((player) => (
+                  <tr key={player.id} className="hover:bg-orange-50/20 transition">
                     <td className="py-4 px-4 font-bold text-slate-800">{player.name}</td>
                     <td className="py-4 px-4">{player.game || player.sport}</td>
                     <td className="py-4 px-4">{player.location}</td>
@@ -102,7 +133,7 @@ function AdminDashboard() {
                     </td>
                     <td className="py-4 px-4 text-center">
                       <button
-                        onClick={() => deletePlayer(index)}
+                        onClick={() => deletePlayer(player.id)}
                         className="font-body font-semibold bg-red-50 hover:bg-red-100 text-red-600 py-1 px-3 rounded-lg text-xs transition duration-200"
                       >
                         Delete Profile

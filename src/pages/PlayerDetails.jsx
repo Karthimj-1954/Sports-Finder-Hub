@@ -1,14 +1,42 @@
 import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import LocationNameMap from "../components/LocationNameMap";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 function PlayerDetails() {
   const { id } = useParams();
 
+  const [player, setPlayer] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   const userId = auth.currentUser?.uid;
   console.log("Current User:", userId);
-  const players = JSON.parse(localStorage.getItem(`players_${userId}`)) || [];
-  const player = players[id];
+
+  useEffect(() => {
+    const fetchPlayer = async () => {
+      try {
+        const docRef = doc(db, "players", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setPlayer({ id: docSnap.id, ...docSnap.data() });
+        }
+      } catch (error) {
+        console.error("Error fetching player details: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlayer();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="max-w-xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
+        Loading player details...
+      </div>
+    );
+  }
 
   if (!player) {
     return (

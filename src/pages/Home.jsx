@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 function Home() {
   const animations = [
@@ -22,21 +23,69 @@ function Home() {
     return animations[randomIndex];
   });
 
+  const [players, setPlayers] = useState([]);
+  const [playRequests, setPlayRequests] = useState([]);
+  const [requestsCount, setRequestsCount] = useState(0);
+  const [acceptedRequestsCount, setAcceptedRequestsCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
   const userId = auth.currentUser?.uid;
   console.log("Current User:", userId);
-  const players = JSON.parse(localStorage.getItem(`players_${userId}`)) || [];
-  const requests = JSON.parse(localStorage.getItem(`requests_${userId}`)) || [];
-  const playRequests = JSON.parse(localStorage.getItem(`playRequests_${userId}`)) || [];
 
-  const acceptedRequests = requests.filter(
-    (request) => request.status === "Accepted"
-  );
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // 1. Fetch players
+        const playersSnapshot = await getDocs(collection(db, "players"));
+        const playersList = playersSnapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+        setPlayers(playersList);
+
+        // 2. Fetch playRequests
+        const playRequestsSnapshot = await getDocs(collection(db, "playRequests"));
+        const playRequestsList = playRequestsSnapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+        setPlayRequests(playRequestsList);
+
+        // 3. Fetch requests for receiverId == userId
+        if (userId) {
+          const reqQuery = query(collection(db, "requests"), where("receiverId", "==", userId));
+          const reqSnapshot = await getDocs(reqQuery);
+          const myRequests = reqSnapshot.docs.map((docSnap) => docSnap.data());
+          setRequestsCount(myRequests.length);
+
+          const myAccepted = myRequests.filter((req) => req.status === "Accepted");
+          setAcceptedRequestsCount(myAccepted.length);
+        }
+      } catch (error) {
+        console.error("Error loading home dashboard data: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [userId]);
+
+  const displayedPlayers = players.filter((player) => player.ownerId !== userId);
+  const displayedPlayRequests = playRequests.filter((req) => req.status === "Open" && req.creatorId !== userId);
 
   const statCardClass =
     "bg-[#FFF9F2]/80 backdrop-blur-md border border-orange-100 text-slate-800 shadow-xl rounded-2xl p-6 transition-all duration-300 hover:scale-105 hover:shadow-2xl flex flex-col items-center justify-center text-center";
 
   const cardClass =
     "bg-[#FFF9F2]/90 backdrop-blur-sm border border-orange-100/50 text-slate-800 shadow-lg rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between";
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
+        Loading dashboard details...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto pt-10 px-4">
@@ -87,19 +136,19 @@ function Home() {
 
         <div className={statCardClass}>
           <div className="p-3 bg-orange-50/80 text-[#D35400] rounded-full text-2xl mb-3 font-semibold">🏸</div>
-          <h3 className="font-heading text-4xl font-bold text-[#D35400]">{playRequests.length}</h3>
+          <h3 className="font-heading text-4xl font-bold text-[#D35400]">{playRequests.filter(r => r.status === "Open").length}</h3>
           <p className="font-body text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wider">Open Play Requests</p>
         </div>
 
         <div className={statCardClass}>
           <div className="p-3 bg-orange-100/60 text-[#8E2F00] rounded-full text-2xl mb-3 font-semibold">📩</div>
-          <h3 className="font-heading text-4xl font-bold text-[#8E2F00]">{requests.length}</h3>
+          <h3 className="font-heading text-4xl font-bold text-[#8E2F00]">{requestsCount}</h3>
           <p className="font-body text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wider">Total Requests</p>
         </div>
 
         <div className={statCardClass}>
           <div className="p-3 bg-orange-100/80 text-[#A04000] rounded-full text-2xl mb-3 font-semibold">✅</div>
-          <h3 className="font-heading text-4xl font-bold text-[#A04000]">{acceptedRequests.length}</h3>
+          <h3 className="font-heading text-4xl font-bold text-[#A04000]">{acceptedRequestsCount}</h3>
           <p className="font-body text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wider">Accepted Requests</p>
         </div>
       </div>
@@ -118,7 +167,7 @@ function Home() {
           </Link>
         </div>
 
-        {players.length === 0 ? (
+        {displayedPlayers.length === 0 ? (
           <div className="bg-[#FFF9F2]/80 border border-orange-100 rounded-2xl p-10 text-center shadow">
             <p className="font-body text-base leading-relaxed text-slate-500">No player profiles registered yet.</p>
             <Link
@@ -130,8 +179,8 @@ function Home() {
           </div>
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
-            {players.slice(0, 6).map((player, index) => (
-              <div key={index} className={cardClass}>
+            {displayedPlayers.slice(0, 6).map((player) => (
+              <div key={player.id} className={cardClass}>
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-heading text-xl font-semibold text-slate-800 truncate">
@@ -168,7 +217,7 @@ function Home() {
 
                 <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
                   <Link
-                    to={`/player/${index}`}
+                    to={`/player/${player.id}`}
                     className="font-body font-semibold w-full text-center bg-[#E65100] hover:bg-[#D35400] text-white py-2.5 px-4 rounded-xl shadow-md transition duration-200"
                   >
                     View Profile
@@ -194,14 +243,14 @@ function Home() {
           </Link>
         </div>
 
-        {playRequests.length === 0 ? (
+        {displayedPlayRequests.length === 0 ? (
           <div className="bg-[#FFF9F2]/80 border border-orange-100 rounded-2xl p-10 text-center shadow">
             <p className="font-body text-base leading-relaxed text-slate-500">No play requests created yet.</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
-            {playRequests.map((request, index) => (
-              <div key={index} className={cardClass}>
+            {displayedPlayRequests.map((request) => (
+              <div key={request.id} className={cardClass}>
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-heading text-xl font-semibold text-slate-800 truncate">
@@ -246,7 +295,7 @@ function Home() {
 
                 <div className="mt-6 pt-4 border-t border-slate-100">
                   <Link
-                    to={`/match/${index}`}
+                    to={`/match/${request.id}`}
                     className="font-body font-semibold w-full block text-center bg-[#8E2F00] hover:bg-[#7A2800] text-white py-2.5 px-4 rounded-xl shadow-md transition duration-200"
                   >
                     View Details

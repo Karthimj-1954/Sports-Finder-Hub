@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
+import { doc, getDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
 
 // We import L to fix the Leaflet default marker icon issue
 import L from "leaflet";
@@ -25,18 +26,33 @@ function MatchDetails() {
   const userId = auth.currentUser?.uid;
   console.log("Current User:", userId);
 
-  // Lazy state initialization to keep render pure and avoid useEffect setState warning
-  const [match] = useState(() => {
-    const uid = auth.currentUser?.uid;
-    const playRequests = JSON.parse(localStorage.getItem(`playRequests_${uid}`)) || [];
-    const index = parseInt(id, 10);
-    return playRequests[index] || null;
-  });
+  const [match, setMatch] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [mapCoords, setMapCoords] = useState([8.5241, 76.9366]); // Default center
-  // Initialize loadingMap based on whether we need to load coords
-  const [loadingMap, setLoadingMap] = useState(() => !!(match && match.location));
+  const [loadingMap, setLoadingMap] = useState(false);
   const [hasCoords, setHasCoords] = useState(false);
+
+  useEffect(() => {
+    const fetchMatch = async () => {
+      try {
+        const docRef = doc(db, "playRequests", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const matchData = { id: docSnap.id, ...docSnap.data() };
+          setMatch(matchData);
+          if (matchData.location) {
+            setLoadingMap(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching match: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMatch();
+  }, [id]);
 
   useEffect(() => {
     if (match && match.location) {
@@ -57,45 +73,78 @@ function MatchDetails() {
     }
   }, [match]);
 
-  if (!match) {
+  const handleJoinRequest = async () => {
+    const uid = auth.currentUser?.uid;
+    const email = auth.currentUser?.email;
+    if (!uid) {
+      alert("Please login to send join requests");
+      return;
+    }
+
+    if (match.creatorId === uid) {
+      alert("You cannot join your own session request.");
+      return;
+    }
+
+    try {
+      // Determine joining player name from profiles
+      let playerName = "Anonymous Player";
+      const q = query(collection(db, "players"), where("ownerId", "==", uid));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        playerName = querySnapshot.docs[0].data().name || playerName;
+      }
+
+      // Add to requests list in Firestore
+      const newRequest = {
+        senderId: uid,
+        senderEmail: email || "",
+        receiverId: match.creatorId || "",
+        receiverEmail: match.creatorEmail || "",
+        playerName: playerName,
+        game: match.game,
+        skill: match.skill,
+        location: match.location,
+        status: "Pending",
+        createdAt: new Date().toISOString(),
+      };
+
+      await addDoc(collection(db, "requests"), newRequest);
+      
+      alert(`Successfully sent request to join this ${match.game} session!`);
+      navigate("/notifications");
+    } catch (error) {
+      console.error("Error joining match: ", error);
+      alert("Failed to join session: " + error.message);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="max-w-xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center">
-        <h1 className="font-heading text-2xl font-bold text-slate-800">Match Request Not Found</h1>
-        <p className="font-body text-base leading-relaxed text-slate-500 mt-2">The play request you are looking for does not exist or has been removed.</p>
-        <Link to="/" className="font-body font-semibold mt-6 inline-block bg-orange-600 hover:bg-orange-700 text-white py-2.5 px-6 rounded-xl transition text-sm text-center">
-          Go Back Home
-        </Link>
+      <div className="max-w-xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
+        Loading session details...
       </div>
     );
   }
 
-  const handleJoinRequest = () => {
-    // Determine joining player name from profiles
-    const uid = auth.currentUser?.uid;
-    const players = JSON.parse(localStorage.getItem(`players_${uid}`)) || [];
-    let playerName = "Anonymous Player";
-    if (players.length > 0) {
-      playerName = players[players.length - 1].name; // Get name from last saved profile
-    }
-
-    const requests = JSON.parse(localStorage.getItem(`requests_${uid}`)) || [];
-    
-    // Add to requests list
-    const newRequest = {
-      player: playerName,
-      game: match.game,
-      skill: match.skill,
-      location: match.location,
-      status: "Pending",
-      time: new Date().toLocaleString(),
-    };
-
-    requests.push(newRequest);
-    localStorage.setItem(`requests_${uid}`, JSON.stringify(requests));
-    
-    alert(`Successfully sent request to join this ${match.game} session!`);
-    navigate("/notifications");
-  };
+  if (!match) {
+    return (
+      <div className="max-w-5xl mx-auto mt-10 px-4 mb-20">
+        <div className="mb-6">
+          <Link to="/" className="font-body font-semibold text-sm text-orange-600 hover:text-orange-700 bg-orange-50 px-3 py-1.5 rounded-lg transition text-center">
+            &larr; Back to Home
+          </Link>
+        </div>
+        <div className="max-w-xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center">
+          <h1 className="font-heading text-2xl font-bold text-slate-800">Match Request Not Found</h1>
+          <p className="font-body text-base leading-relaxed text-slate-500 mt-2">The play request you are looking for does not exist or has been removed.</p>
+          <Link to="/" className="font-body font-semibold mt-6 inline-block bg-orange-600 hover:bg-orange-700 text-white py-2.5 px-6 rounded-xl transition text-sm text-center">
+            Go Back Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto mt-10 px-4 mb-20">

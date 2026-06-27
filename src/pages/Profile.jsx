@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { games, locationTypes, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
+import { collection, query, where, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
 
 function Profile() {
   const navigate = useNavigate();
@@ -10,22 +11,51 @@ function Profile() {
   const userId = auth.currentUser?.uid;
   console.log("Current User:", userId);
 
-  const [players] = useState(() => {
-    const uid = auth.currentUser?.uid;
-    return JSON.parse(localStorage.getItem(`players_${uid}`)) || [];
-  });
-  const lastPlayer = players.length > 0 ? players[players.length - 1] : null;
+  const [profileId, setProfileId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [name, setName] = useState(lastPlayer ? lastPlayer.name || "" : "");
-  const [game, setGame] = useState(lastPlayer ? lastPlayer.game || "" : "");
-  const [skill, setSkill] = useState(lastPlayer ? lastPlayer.skill || "" : "");
-  const [availabilityDay, setAvailabilityDay] = useState(lastPlayer ? lastPlayer.availabilityDay || "" : "");
-  const [availabilityTime, setAvailabilityTime] = useState(lastPlayer ? lastPlayer.availabilityTime || "" : "");
-  const [location, setLocation] = useState(lastPlayer ? lastPlayer.location || "" : "");
-  const [locationType, setLocationType] = useState(lastPlayer ? lastPlayer.locationType || "" : "");
-  const [about, setAbout] = useState(lastPlayer ? lastPlayer.about || "" : "");
+  const [name, setName] = useState("");
+  const [game, setGame] = useState("");
+  const [skill, setSkill] = useState("");
+  const [availabilityDay, setAvailabilityDay] = useState("");
+  const [availabilityTime, setAvailabilityTime] = useState("");
+  const [location, setLocation] = useState("");
+  const [locationType, setLocationType] = useState("");
+  const [about, setAbout] = useState("");
 
-  const saveProfile = (e) => {
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const q = query(collection(db, "players"), where("ownerId", "==", uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const docSnap = querySnapshot.docs[0];
+          const data = docSnap.data();
+          setProfileId(docSnap.id);
+          setName(data.name || "");
+          setGame(data.game || "");
+          setSkill(data.skill || "");
+          setAvailabilityDay(data.availabilityDay || "");
+          setAvailabilityTime(data.availabilityTime || "");
+          setLocation(data.location || "");
+          setLocationType(data.locationType || "");
+          setAbout(data.about || "");
+        }
+      } catch (error) {
+        console.error("Error fetching profile: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const saveProfile = async (e) => {
     e.preventDefault();
 
     if (!name || !game || !skill || !location || !locationType) {
@@ -34,10 +64,15 @@ function Profile() {
     }
 
     const uid = auth.currentUser?.uid;
-    const updatedPlayers = JSON.parse(localStorage.getItem(`players_${uid}`)) || [];
+    const email = auth.currentUser?.email;
+    if (!uid) {
+      alert("You must be logged in to save your profile.");
+      return;
+    }
 
-    // Create the updated profile object
-    const newProfile = {
+    const profileData = {
+      ownerId: uid,
+      ownerEmail: email || "",
       name,
       game,
       sport: game,
@@ -49,18 +84,28 @@ function Profile() {
       about,
     };
 
-    // If the name matches an existing profile, update it, otherwise push a new one
-    const existingIndex = updatedPlayers.findIndex((p) => p.name.toLowerCase() === name.toLowerCase());
-    if (existingIndex !== -1) {
-      updatedPlayers[existingIndex] = newProfile;
-    } else {
-      updatedPlayers.push(newProfile);
+    try {
+      if (profileId) {
+        await updateDoc(doc(db, "players", profileId), profileData);
+      } else {
+        const docRef = await addDoc(collection(db, "players"), profileData);
+        setProfileId(docRef.id);
+      }
+      alert("Profile saved successfully!");
+      navigate("/");
+    } catch (error) {
+      console.error("Error saving profile: ", error);
+      alert("Failed to save profile: " + error.message);
     }
-
-    localStorage.setItem(`players_${uid}`, JSON.stringify(updatedPlayers));
-    alert("Profile saved successfully!");
-    navigate("/");
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
+        Loading profile details...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto mt-10 px-4">

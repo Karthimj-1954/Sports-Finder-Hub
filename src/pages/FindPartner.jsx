@@ -1,17 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { games, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
+import { collection, getDocs, addDoc } from "firebase/firestore";
 
 function FindPartner() {
   const [game, setGame] = useState("");
   const [skill, setSkill] = useState("");
   const [location, setLocation] = useState("");
+  const [searchName, setSearchName] = useState("");
+
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const userId = auth.currentUser?.uid;
   console.log("Current User:", userId);
-  const players = JSON.parse(localStorage.getItem(`players_${userId}`)) || [];
+
+  useEffect(() => {
+    const fetchPlayers = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "players"));
+        const playersList = querySnapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+        setPlayers(playersList);
+      } catch (error) {
+        console.error("Error fetching players: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlayers();
+  }, []);
 
   const filteredPlayers = players.filter((player) => {
     const matchGame =
@@ -26,27 +48,57 @@ function FindPartner() {
         ?.toLowerCase()
         .includes(location.toLowerCase());
 
-    return matchGame && matchSkill && matchLocation;
+    const matchName =
+      searchName === "" ||
+      player.name
+        ?.toLowerCase()
+        .includes(searchName.toLowerCase());
+
+    return matchGame && matchSkill && matchLocation && matchName;
   });
 
-  const sendRequest = (player) => {
+  const sendRequest = async (player) => {
     const uid = auth.currentUser?.uid;
-    const requests = JSON.parse(localStorage.getItem(`requests_${uid}`)) || [];
+    const email = auth.currentUser?.email;
+    if (!uid) {
+      alert("Please login to send play requests");
+      return;
+    }
+
+    if (player.ownerId === uid) {
+      alert("You cannot send a play request to yourself.");
+      return;
+    }
 
     const newRequest = {
-      player: player.name,
-      game: player.game || player.sport,
-      skill: player.skill,
-      location: player.location,
+      senderId: uid,
+      senderEmail: email || "",
+      receiverId: player.ownerId || "",
+      receiverEmail: player.ownerEmail || "",
+      playerName: player.name || "",
+      game: player.game || player.sport || "",
+      skill: player.skill || "",
+      location: player.location || "",
       status: "Pending",
-      time: new Date().toLocaleString(),
+      createdAt: new Date().toISOString(),
     };
 
-    requests.push(newRequest);
-    localStorage.setItem(`requests_${uid}`, JSON.stringify(requests));
-
-    alert(`Play request sent to ${player.name}`);
+    try {
+      await addDoc(collection(db, "requests"), newRequest);
+      alert(`Play request sent to ${player.name}`);
+    } catch (error) {
+      console.error("Error sending request: ", error);
+      alert("Failed to send request: " + error.message);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
+        Loading local game partners...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto mt-10 px-4">
@@ -61,7 +113,20 @@ function FindPartner() {
       </div>
 
       {/* Filters Card */}
-      <div className="bg-[#FFF9F2]/80 backdrop-blur-md border border-orange-100/50 p-6 rounded-3xl shadow-xl mb-10 grid md:grid-cols-3 gap-4">
+      <div className="bg-[#FFF9F2]/80 backdrop-blur-md border border-orange-100/50 p-6 rounded-3xl shadow-xl mb-10 grid md:grid-cols-4 gap-4">
+        <div>
+          <label className="font-body font-semibold block text-xs uppercase tracking-wider text-slate-500 mb-1.5 ml-1">
+            Search Name
+          </label>
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            className="font-body font-normal w-full border border-orange-100 p-3 bg-[#FFFDFB] rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition text-sm"
+          />
+        </div>
+
         <div>
           <label className="font-body font-semibold block text-xs uppercase tracking-wider text-slate-500 mb-1.5 ml-1">
             Game Type
@@ -121,9 +186,9 @@ function FindPartner() {
         </div>
       ) : (
         <div className="grid md:grid-cols-3 gap-6 mb-20">
-          {filteredPlayers.map((player, index) => (
+          {filteredPlayers.map((player) => (
             <div
-              key={index}
+              key={player.id}
               className="bg-[#FFF9F2]/90 backdrop-blur-sm border border-orange-100/50 p-6 rounded-2xl shadow-lg hover:-translate-y-1 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
             >
               <div>
@@ -171,7 +236,7 @@ function FindPartner() {
                   Send Play Request
                 </button>
                 <Link
-                  to={`/player/${index}`}
+                  to={`/player/${player.id}`}
                   className="font-body font-semibold bg-orange-50 hover:bg-orange-100 text-orange-800 py-2.5 px-4 rounded-xl transition duration-200 text-center text-sm"
                 >
                   Profile
