@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { games, locationTypes, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
 import { auth, db } from "../firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs } from "firebase/firestore";
+import { toast } from "react-hot-toast";
 
 function CreatePlayRequest() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ function CreatePlayRequest() {
   const userId = auth.currentUser?.uid;
   console.log("Current User:", userId);
 
+  const [gamesList, setGamesList] = useState(games);
   const [game, setGame] = useState("");
   const [location, setLocation] = useState("");
   const [locationType, setLocationType] = useState("");
@@ -18,19 +20,35 @@ function CreatePlayRequest() {
   const [time, setTime] = useState("");
   const [playersNeeded, setPlayersNeeded] = useState("");
   const [skill, setSkill] = useState("");
+  const [latitude, setLatitude] = useState(0);
+  const [longitude, setLongitude] = useState(0);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const catSnap = await getDocs(collection(db, "sportsCategories"));
+        if (!catSnap.empty) {
+          setGamesList(catSnap.docs.map((docSnap) => docSnap.data().name));
+        }
+      } catch (error) {
+        console.error("Error fetching categories: ", error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const createRequest = async (e) => {
     e.preventDefault();
 
     if (!game || !location || !locationType || !date || !time || !playersNeeded || !skill) {
-      alert("Please fill all fields");
+      toast.error("Please fill all fields");
       return;
     }
 
     const uid = auth.currentUser?.uid;
     const email = auth.currentUser?.email;
     if (!uid) {
-      alert("Please login to create a play request");
+      toast.error("Please login to create a play request");
       return;
     }
 
@@ -40,6 +58,8 @@ function CreatePlayRequest() {
       game,
       location,
       locationType,
+      latitude: latitude || 0,
+      longitude: longitude || 0,
       date,
       time,
       playersNeeded: parseInt(playersNeeded, 10),
@@ -48,18 +68,22 @@ function CreatePlayRequest() {
       createdAt: new Date().toISOString(),
     };
 
+    const loadingToast = toast.loading("Creating play request...");
+
     try {
       await addDoc(collection(db, "playRequests"), newRequest);
-      alert("Play request created successfully!");
+      toast.dismiss(loadingToast);
+      toast.success("Play request created successfully!");
       navigate("/");
     } catch (error) {
+      toast.dismiss(loadingToast);
       console.error("Error creating play request: ", error);
-      alert("Failed to create play request: " + error.message);
+      toast.error("Failed to create play request: " + error.message);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto mt-10 px-4">
+    <div className="max-w-xl mx-auto mt-10 px-4 mb-20">
       <div className="bg-[#FFF9F2]/90 backdrop-blur-md border border-orange-100/50 p-8 rounded-3xl shadow-2xl text-slate-800">
         <div className="mb-6">
           <h1 className="font-heading text-3xl font-semibold tracking-tight text-slate-800">
@@ -80,7 +104,7 @@ function CreatePlayRequest() {
               required
             >
               <option value="">Select Game</option>
-              {games.map((item) => (
+              {gamesList.map((item) => (
                 <option key={item} value={item}>
                   {item}
                 </option>
@@ -98,7 +122,13 @@ function CreatePlayRequest() {
               className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
               required
             />
-            <LocationNameMap locationName={location} />
+            <LocationNameMap
+              locationName={location}
+              onCoordsResolved={(lat, lon) => {
+                setLatitude(lat);
+                setLongitude(lon);
+              }}
+            />
           </div>
 
           <div>

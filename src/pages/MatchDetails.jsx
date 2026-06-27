@@ -1,275 +1,207 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import LocationNameMap from "../components/LocationNameMap";
 import { auth, db } from "../firebase";
-import { doc, getDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
-
-// We import L to fix the Leaflet default marker icon issue
-import L from "leaflet";
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import shadowUrl from "leaflet/dist/images/marker-shadow.png";
-
-const DefaultIcon = L.icon({
-  iconUrl,
-  shadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+import { doc, getDoc, addDoc, query, collection, where, getDocs } from "firebase/firestore";
+import { toast } from "react-hot-toast";
 
 function MatchDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
-  const userId = auth.currentUser?.uid;
-  console.log("Current User:", userId);
 
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [mapCoords, setMapCoords] = useState([8.5241, 76.9366]); // Default center
-  const [loadingMap, setLoadingMap] = useState(false);
-  const [hasCoords, setHasCoords] = useState(false);
+  const userId = auth.currentUser?.uid;
+  console.log("Current User:", userId);
 
   useEffect(() => {
-    const fetchMatch = async () => {
+    const fetchMatchDetails = async () => {
       try {
         const docRef = doc(db, "playRequests", id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          const matchData = { id: docSnap.id, ...docSnap.data() };
-          setMatch(matchData);
-          if (matchData.location) {
-            setLoadingMap(true);
-          }
+          setMatch({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          toast.error("Play request session not found");
+          navigate("/");
         }
       } catch (error) {
-        console.error("Error fetching match: ", error);
+        console.error("Error loading match session details: ", error);
+        toast.error("Error loading request details");
       } finally {
         setLoading(false);
       }
     };
-    fetchMatch();
-  }, [id]);
+    fetchMatchDetails();
+  }, [id, navigate]);
 
-  useEffect(() => {
-    if (match && match.location) {
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(match.location)}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && data.length > 0) {
-            const lat = parseFloat(data[0].lat);
-            const lon = parseFloat(data[0].lon);
-            setMapCoords([lat, lon]);
-            setHasCoords(true);
-          }
-          setLoadingMap(false);
-        })
-        .catch(() => {
-          setLoadingMap(false);
-        });
-    }
-  }, [match]);
-
-  const handleJoinRequest = async () => {
+  const joinMatch = async () => {
     const uid = auth.currentUser?.uid;
     const email = auth.currentUser?.email;
     if (!uid) {
-      alert("Please login to send join requests");
+      toast.error("Please login to join play sessions");
       return;
     }
 
     if (match.creatorId === uid) {
-      alert("You cannot join your own session request.");
+      toast.error("You cannot send a join request to your own match listing.");
       return;
     }
 
+    const joinReq = {
+      senderId: uid,
+      senderEmail: email || "",
+      receiverId: match.creatorId || "",
+      receiverEmail: match.creatorEmail || "",
+      playerName: email?.split("@")[0] || "Someone",
+      game: match.game || "",
+      skill: match.skill || "Intermediate",
+      location: match.location || "",
+      status: "Pending",
+      createdAt: new Date().toISOString(),
+    };
+
+    const loadingToast = toast.loading("Sending join request...");
+
     try {
-      // Determine joining player name from profiles
-      let playerName = "Anonymous Player";
+      // Find sender profile name to use in notification/request name
+      let senderName = email?.split("@")[0] || "Someone";
       const q = query(collection(db, "players"), where("ownerId", "==", uid));
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        playerName = querySnapshot.docs[0].data().name || playerName;
+      const qSnap = await getDocs(q);
+      if (!qSnap.empty) {
+        const profileData = qSnap.docs[0].data();
+        senderName = profileData.name || senderName;
+        joinReq.playerName = profileData.name || joinReq.playerName;
+        joinReq.skill = profileData.skill || profileData.skillLevel || joinReq.skill;
       }
 
-      // Add to requests list in Firestore
-      const newRequest = {
-        senderId: uid,
-        senderEmail: email || "",
-        receiverId: match.creatorId || "",
-        receiverEmail: match.creatorEmail || "",
-        playerName: playerName,
-        game: match.game,
-        skill: match.skill,
-        location: match.location,
-        status: "Pending",
-        createdAt: new Date().toISOString(),
-      };
+      await addDoc(collection(db, "requests"), joinReq);
 
-      await addDoc(collection(db, "requests"), newRequest);
-      
-      alert(`Successfully sent request to join this ${match.game} session!`);
-      navigate("/notifications");
+      // Create notification
+      await addDoc(collection(db, "notifications"), {
+        userId: match.creatorId,
+        message: `${senderName} wants to join your ${match.game} session.`,
+        type: "request",
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      toast.dismiss(loadingToast);
+      toast.success("Join request sent successfully!");
     } catch (error) {
-      console.error("Error joining match: ", error);
-      alert("Failed to join session: " + error.message);
+      toast.dismiss(loadingToast);
+      console.error("Error sending join request: ", error);
+      toast.error("Failed to send join request: " + error.message);
     }
   };
 
   if (loading) {
     return (
-      <div className="max-w-xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
-        Loading session details...
+      <div className="max-w-2xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-3xl animate-spin">🔄</span>
+          Loading match session...
+        </div>
       </div>
     );
   }
 
-  if (!match) {
-    return (
-      <div className="max-w-5xl mx-auto mt-10 px-4 mb-20">
-        <div className="mb-6">
-          <Link to="/" className="font-body font-semibold text-sm text-orange-600 hover:text-orange-700 bg-orange-50 px-3 py-1.5 rounded-lg transition text-center">
-            &larr; Back to Home
-          </Link>
-        </div>
-        <div className="max-w-xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center">
-          <h1 className="font-heading text-2xl font-bold text-slate-800">Match Request Not Found</h1>
-          <p className="font-body text-base leading-relaxed text-slate-500 mt-2">The play request you are looking for does not exist or has been removed.</p>
-          <Link to="/" className="font-body font-semibold mt-6 inline-block bg-orange-600 hover:bg-orange-700 text-white py-2.5 px-6 rounded-xl transition text-sm text-center">
-            Go Back Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (!match) return null;
+
+  // Google Maps link
+  const mapQuery = match.latitude && match.longitude
+    ? `${match.latitude},${match.longitude}`
+    : encodeURIComponent(match.location);
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
 
   return (
-    <div className="max-w-5xl mx-auto mt-10 px-4 mb-20">
-      <div className="mb-6">
-        <Link to="/" className="font-body font-semibold text-sm text-orange-600 hover:text-orange-700 bg-orange-50 px-3 py-1.5 rounded-lg transition text-center">
-          &larr; Back to Home
-        </Link>
-      </div>
+    <div className="max-w-2xl mx-auto mt-10 px-4 mb-20">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate("/")}
+        className="font-body font-semibold flex items-center gap-2 bg-orange-100 hover:bg-orange-200 text-orange-850 py-2.5 px-5 rounded-xl transition duration-200 text-sm mb-6 shadow-sm cursor-pointer"
+      >
+        <span>⬅</span> Back to Home
+      </button>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* Left: Match Info Details Card */}
-        <div className="bg-[#FFF9F2]/90 backdrop-blur-md border border-orange-100/50 p-8 rounded-3xl shadow-2xl text-slate-800 flex flex-col justify-between">
+      {/* Detail Card */}
+      <div className="bg-[#FFF9F2]/90 backdrop-blur-md border border-orange-100/50 p-8 rounded-3xl shadow-2xl text-slate-800">
+        <div className="mb-6 flex justify-between items-start">
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <span className="font-body font-semibold bg-orange-50 text-orange-700 text-xs px-3.5 py-1.5 rounded-full uppercase tracking-wider border border-orange-100">
-                {match.skill} Preferred
-              </span>
-              <span className={`font-body font-semibold text-xs px-3 py-1 rounded-full uppercase tracking-wider border ${
-                match.status === "Open" 
-                  ? "bg-green-50 text-green-700 border-green-100" 
-                  : "bg-red-50 text-red-700 border-red-100"
-              }`}>
-                {match.status}
-              </span>
-            </div>
-
-            <h1 className="font-heading text-4xl font-bold text-slate-800 tracking-tight mb-2">
-              {match.game} Session
-            </h1>
-            <p className="font-body text-sm text-slate-500 mb-6">
-              Match organized on {match.date} at {match.time}
+            <h1 className="font-heading text-3xl font-bold text-slate-800">Match Details</h1>
+            <p className="font-body text-sm text-slate-500 mt-1">
+              Host: <span className="font-semibold text-slate-700">{match.creatorEmail}</span>
             </p>
+          </div>
+          <span className="font-body font-semibold bg-green-50 text-green-700 text-xs px-2.5 py-1 rounded-full uppercase border border-green-150">
+            {match.status}
+          </span>
+        </div>
 
-            <hr className="border-orange-100/30 my-6" />
-
-            <div className="font-body text-base leading-relaxed space-y-4">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl bg-orange-50 p-2.5 rounded-xl text-orange-600">📍</span>
-                <div>
-                  <p className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Location</p>
-                  <p className="text-slate-700 font-semibold">{match.location}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-2xl bg-orange-50 p-2.5 rounded-xl text-orange-600">🏠</span>
-                <div>
-                  <p className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Place Type</p>
-                  <p className="text-slate-700 font-semibold">{match.locationType}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-2xl bg-orange-50 p-2.5 rounded-xl text-orange-600">🗓️</span>
-                <div>
-                  <p className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Date & Time</p>
-                  <p className="text-slate-700 font-semibold">{match.date} @ {match.time}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-2xl bg-orange-50 p-2.5 rounded-xl text-orange-600">👥</span>
-                <div>
-                  <p className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Players Needed</p>
-                  <p className="text-slate-700 font-semibold">{match.playersNeeded} player(s)</p>
-                </div>
-              </div>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-6 bg-orange-50/30 p-5 rounded-2xl border border-orange-100">
+            <div>
+              <span className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Game / Sport</span>
+              <p className="font-heading text-lg font-bold text-slate-750 mt-1">{match.game}</p>
+            </div>
+            <div>
+              <span className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Skill Requirement</span>
+              <p className="font-heading text-lg font-bold text-slate-750 mt-1">{match.skill}</p>
+            </div>
+            <div>
+              <span className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</span>
+              <p className="font-heading text-base font-bold text-slate-700 mt-1">{match.date}</p>
+            </div>
+            <div>
+              <span className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Time</span>
+              <p className="font-heading text-base font-bold text-slate-700 mt-1">{match.time}</p>
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-orange-100/30">
-            {match.status === "Open" ? (
+          <div className="bg-[#FFFDFB] border border-orange-100 p-5 rounded-2xl shadow-sm">
+            <span className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider">Players Needed</span>
+            <p className="font-heading text-lg font-bold text-orange-800 mt-1">👥 {match.playersNeeded} player(s) required</p>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-heading text-lg font-bold text-slate-800">Playing Location</h3>
+              <a
+                href={googleMapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-body font-semibold text-xs text-white bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 py-1.5 px-3.5 rounded-xl shadow transition duration-200"
+              >
+                🗺️ Open in Google Maps
+              </a>
+            </div>
+
+            <div className="bg-[#FFFDFB] border border-orange-100 p-4 rounded-2xl shadow-sm">
+              <p className="font-body text-sm text-slate-650 mb-2">
+                📍 {match.location} ({match.locationType || "Local Court"})
+              </p>
+              <LocationNameMap locationName={match.location} />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="pt-6 border-t border-slate-100 flex gap-4">
+            {match.creatorId !== userId && (
               <button
-                onClick={handleJoinRequest}
-                className="font-body font-semibold w-full bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 text-white py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-200 text-center"
+                onClick={joinMatch}
+                className="font-body font-semibold flex-1 bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 text-white py-3.5 px-6 rounded-xl shadow-lg hover:shadow-xl transition duration-200 text-center text-sm cursor-pointer"
               >
                 Request to Join Session
               </button>
-            ) : (
-              <button
-                disabled
-                className="font-body font-semibold w-full bg-slate-100 text-slate-400 py-4 px-6 rounded-2xl cursor-not-allowed text-center"
-              >
-                Session Closed
-              </button>
             )}
+            <button
+              onClick={() => navigate("/")}
+              className="font-body font-semibold px-6 py-3.5 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-xl transition duration-200 text-sm text-center"
+            >
+              Cancel
+            </button>
           </div>
-        </div>
-
-        {/* Right: Leaflet Map Viewer */}
-        <div className="bg-[#FFF9F2]/90 backdrop-blur-md border border-orange-100/50 p-6 rounded-3xl shadow-2xl text-slate-800 flex flex-col min-h-[400px]">
-          <h3 className="font-heading text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <span>🗺️</span> Playing Location Map
-          </h3>
-          
-          <div className="flex-1 rounded-2xl overflow-hidden border border-orange-100/50 shadow-inner relative">
-            {loadingMap ? (
-              <div className="font-body text-sm absolute inset-0 flex items-center justify-center bg-orange-50/20 text-slate-500 font-medium">
-                Loading Map location...
-              </div>
-            ) : (
-              <MapContainer
-                center={mapCoords}
-                zoom={14}
-                style={{ height: "100%", width: "100%" }}
-              >
-                <TileLayer
-                  attribution="&copy; OpenStreetMap contributors"
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <Marker position={mapCoords} icon={DefaultIcon}>
-                  <Popup>
-                    <div className="font-heading font-semibold text-slate-800">{match.game} Session</div>
-                    <div className="font-body text-xs text-slate-500 mt-1">{match.location}</div>
-                  </Popup>
-                </Marker>
-              </MapContainer>
-            )}
-          </div>
-          
-          {!hasCoords && !loadingMap && (
-            <p className="font-body text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl p-3 mt-4 font-semibold text-center">
-              ⚠️ Could not geocode the exact street address. Map is showing regional default center.
-            </p>
-          )}
         </div>
       </div>
     </div>

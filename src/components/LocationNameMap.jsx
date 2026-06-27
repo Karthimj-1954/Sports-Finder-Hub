@@ -15,7 +15,7 @@ const DefaultIcon = L.icon({
   shadowSize: [41, 41],
 });
 
-function LocationNameMap({ locationName }) {
+function LocationNameMap({ locationName, onCoordsResolved }) {
   const [debouncedLocation, setDebouncedLocation] = useState(locationName || "");
   const [coords, setCoords] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -61,6 +61,9 @@ function LocationNameMap({ locationName }) {
           const lat = parseFloat(data[0].lat);
           const lon = parseFloat(data[0].lon);
           setCoords([lat, lon]);
+          if (onCoordsResolved) {
+            onCoordsResolved(lat, lon);
+          }
         } else {
           setCoords(null);
           setError("Location not found. Please enter a more specific place.");
@@ -74,6 +77,7 @@ function LocationNameMap({ locationName }) {
       });
 
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedLocation]);
 
   const mapComponent = useMemo(() => {

@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PageLayout from "./components/PageLayout";
 import SessionManager from "./components/SessionManager";
+import { Toaster } from "react-hot-toast";
 
 import AdminDashboard from "./pages/AdminDashboard";
 import CreatePlayRequest from "./pages/CreatePlayRequest";
@@ -13,10 +14,13 @@ import PlayerDetails from "./pages/PlayerDetails";
 import Profile from "./pages/Profile";
 import Register from "./pages/Register";
 import Requests from "./pages/Requests";
+import CommunityGroups from "./pages/CommunityGroups";
+import MatchHistory from "./pages/MatchHistory";
 
 function App() {
   return (
     <>
+      <Toaster position="top-center" reverseOrder={false} />
       <SessionManager />
       <Routes>
         {/* Public Routes */}
@@ -107,6 +111,28 @@ function App() {
             <ProtectedRoute>
               <PageLayout>
                 <MatchDetails />
+              </PageLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/communities"
+          element={
+            <ProtectedRoute>
+              <PageLayout>
+                <CommunityGroups />
+              </PageLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <PageLayout>
+                <MatchHistory />
               </PageLayout>
             </ProtectedRoute>
           }
