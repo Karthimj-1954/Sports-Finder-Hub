@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { auth, db } from "../firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, deleteDoc, doc, onSnapshot } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 
 function Home() {
@@ -36,65 +36,103 @@ function Home() {
       );
     }
 
-    const loadDashboardData = async () => {
-      const uid = auth.currentUser?.uid;
-      if (!uid) {
-        setLoading(false);
-        return;
-      }
-      try {
-        // Fetch all players to get counts and nearby partner listings
-        const playersSnap = await getDocs(collection(db, "players"));
-        const allPlayers = playersSnap.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      Promise.resolve().then(() => setLoading(false));
+      return;
+    }
 
-        // Fetch all open play requests
-        const playRequestsSnap = await getDocs(
-          query(collection(db, "playRequests"), where("status", "==", "Open"))
-        );
-        const allPlayRequests = playRequestsSnap.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
+    let playersLoaded = false;
+    let requestsLoaded = false;
+    let playRequestsLoaded = false;
 
-        // Fetch received requests for the logged-in user
-        const receivedSnap = await getDocs(
-          query(collection(db, "requests"), where("receiverId", "==", uid))
-        );
-        const allReceived = receivedSnap.docs.map((docSnap) => docSnap.data());
-
-        const activePartnersCount = allPlayers.length;
-        const openSessionsCount = allPlayRequests.length;
-        const receivedRequestsCount = allReceived.length;
-        const acceptedMatchesCount = allReceived.filter(
-          (req) => req.status === "Accepted"
-        ).length;
-
-        setStats({
-          activePartners: activePartnersCount,
-          openRequests: openSessionsCount,
-          receivedRequests: receivedRequestsCount,
-          acceptedMatches: acceptedMatchesCount,
-        });
-
-        // Set nearby partners (exclude current user, limit to 3)
-        const candidates = allPlayers.filter((p) => p.ownerId !== uid);
-        setNearbyPartners(candidates.slice(0, 3));
-
-        // Set open session requests (limit to 3)
-        setOpenSessions(allPlayRequests.slice(0, 3));
-      } catch (error) {
-        console.error("Error loading dashboard data: ", error);
-        toast.error("Failed to load dashboard metrics.");
-      } finally {
+    const checkLoadingFinished = () => {
+      if (playersLoaded && requestsLoaded && playRequestsLoaded) {
         setLoading(false);
       }
     };
 
-    loadDashboardData();
+    // Load players
+    getDocs(collection(db, "players"))
+      .then((playersSnap) => {
+        const allPlayers = playersSnap.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+        const candidates = allPlayers.filter((p) => p.ownerId !== uid);
+        setNearbyPartners(candidates.slice(0, 3));
+        setStats((prev) => ({
+          ...prev,
+          activePartners: allPlayers.length,
+        }));
+        playersLoaded = true;
+        checkLoadingFinished();
+      })
+      .catch((err) => {
+        console.error("Error fetching players: ", err);
+        playersLoaded = true;
+        checkLoadingFinished();
+      });
+
+    // Load requests
+    getDocs(query(collection(db, "requests"), where("receiverId", "==", uid)))
+      .then((receivedSnap) => {
+        const allReceived = receivedSnap.docs.map((docSnap) => docSnap.data());
+        setStats((prev) => ({
+          ...prev,
+          receivedRequests: allReceived.length,
+          acceptedMatches: allReceived.filter((req) => req.status === "Accepted").length,
+        }));
+        requestsLoaded = true;
+        checkLoadingFinished();
+      })
+      .catch((err) => {
+        console.error("Error fetching requests: ", err);
+        requestsLoaded = true;
+        checkLoadingFinished();
+      });
+
+    // Real-time listener for playRequests
+    const q = query(collection(db, "playRequests"), where("status", "==", "Open"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const sessionsList = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      setOpenSessions(sessionsList.slice(0, 3));
+      setStats((prev) => ({
+        ...prev,
+        openRequests: sessionsList.length,
+      }));
+      playRequestsLoaded = true;
+      checkLoadingFinished();
+    }, (error) => {
+      console.error("Error listing playRequests: ", error);
+      playRequestsLoaded = true;
+      checkLoadingFinished();
+    });
+
+    return () => unsubscribe();
   }, [userId]);
+
+  const handleDeleteSession = async (session) => {
+    if (!window.confirm("Are you sure you want to delete this play session?")) {
+      return;
+    }
+
+    const loadingToast = toast.loading("Deleting play session...");
+    try {
+      await deleteDoc(doc(db, "playRequests", session.id));
+      // Proactively update local state for immediate feedback
+      setOpenSessions((prev) => prev.filter((item) => item.id !== session.id));
+      toast.dismiss(loadingToast);
+      toast.success("Play session deleted successfully.");
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error("Error deleting session: ", error);
+      toast.error("Failed to delete session.");
+    }
+  };
 
   const getDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
@@ -385,12 +423,22 @@ function Home() {
                         </p>
                       )}
                     </div>
-                    <Link
-                      to={`/match/${session.id}`}
-                      className="font-body font-semibold bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl shadow transition text-xs"
-                    >
-                      Join Game
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/match/${session.id}`}
+                        className="font-body font-semibold bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl shadow transition text-xs"
+                      >
+                        Join Game
+                      </Link>
+                      {session.creatorId === auth.currentUser?.uid && (
+                        <button
+                          onClick={() => handleDeleteSession(session)}
+                          className="font-body font-semibold border border-red-600 hover:bg-red-50 text-red-600 px-3 py-2 rounded-xl transition text-xs flex items-center gap-1 cursor-pointer"
+                        >
+                          🗑️ Delete
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
