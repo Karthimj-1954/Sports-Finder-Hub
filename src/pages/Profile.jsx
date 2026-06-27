@@ -405,17 +405,6 @@ function Profile() {
             </div>
           </div>
 
-          <div>
-            <label className="font-body font-medium block text-sm text-slate-700 mb-2">Profile Image URL</label>
-            <input
-              type="text"
-              placeholder="Paste a direct link to an avatar image (or leave blank for default)"
-              value={profileImage}
-              onChange={(e) => setProfileImage(e.target.value)}
-              className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-            />
-          </div>
-
           <div className="pt-4 flex gap-4">
             <button
               type="submit"
