@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import LocationNameMap from "../components/LocationNameMap";
 import { auth, db } from "../firebase";
-import { doc, getDoc, addDoc, query, collection, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, addDoc, query, collection, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 
 function PlayerDetails() {
@@ -59,7 +59,7 @@ function PlayerDetails() {
       skill: player.skill || player.skillLevel || "",
       location: player.location || "",
       status: "Pending",
-      createdAt: new Date().toISOString(),
+      createdAt: serverTimestamp(),
     };
 
     const loadingToast = toast.loading("Sending play request...");

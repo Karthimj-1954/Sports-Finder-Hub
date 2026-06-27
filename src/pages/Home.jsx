@@ -83,9 +83,8 @@ function Home() {
         const candidates = allPlayers.filter((p) => p.ownerId !== uid);
         setNearbyPartners(candidates.slice(0, 3));
 
-        // Set open session requests (exclude current user's, limit to 3)
-        const sessions = allPlayRequests.filter((s) => s.creatorId !== uid);
-        setOpenSessions(sessions.slice(0, 3));
+        // Set open session requests (limit to 3)
+        setOpenSessions(allPlayRequests.slice(0, 3));
       } catch (error) {
         console.error("Error loading dashboard data: ", error);
         toast.error("Failed to load dashboard metrics.");

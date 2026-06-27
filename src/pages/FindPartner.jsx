@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { games, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
 import { auth, db } from "../firebase";
-import { collection, getDocs, addDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, addDoc, query, where, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -129,7 +129,7 @@ function FindPartner() {
       skill: player.skill || player.skillLevel || "",
       location: player.location || "",
       status: "Pending",
-      createdAt: new Date().toISOString(),
+      createdAt: serverTimestamp(),
     };
 
     const loadingToast = toast.loading("Sending play request...");

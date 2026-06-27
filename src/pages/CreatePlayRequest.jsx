@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { games, locationTypes, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
 import { auth, db } from "../firebase";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import { collection, addDoc, getDocs, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 
 function CreatePlayRequest() {
@@ -65,7 +65,7 @@ function CreatePlayRequest() {
       playersNeeded: parseInt(playersNeeded, 10),
       skill,
       status: "Open",
-      createdAt: new Date().toISOString(),
+      createdAt: serverTimestamp(),
     };
 
     const loadingToast = toast.loading("Creating play request...");
