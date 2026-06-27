@@ -8,6 +8,12 @@ import { toast } from "react-hot-toast";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const TIMES_OF_DAY = ["Morning", "Afternoon", "Evening", "Night"];
+const SLOT_LABELS = {
+  Morning: "Morning (6 AM - 12 PM)",
+  Afternoon: "Afternoon (12 PM - 5 PM)",
+  Evening: "Evening (5 PM - 9 PM)",
+  Night: "Night (9 PM - 6 AM)"
+};
 
 function Profile() {
   const navigate = useNavigate();
@@ -301,7 +307,7 @@ function Profile() {
                         : "bg-orange-50/50 border-orange-100 text-orange-800 hover:bg-orange-100"
                     }`}
                   >
-                    {tSlot}
+                    {SLOT_LABELS[tSlot] || tSlot}
                   </button>
                 );
               })}
