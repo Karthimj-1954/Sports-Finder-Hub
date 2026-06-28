@@ -33,7 +33,7 @@ function AdminDashboard() {
   const [newCategoryName, setNewCategoryName] = useState("");
 
   // Debug logging
-  console.log("Players:", players);
+  console.log("Loaded players from Firestore:", players);
   console.log("Requests:", requests);
   console.log("Users:", users);
   console.log("Sessions:", sessions);

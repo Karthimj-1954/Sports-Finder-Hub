@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { games, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
 import { auth, db } from "../firebase";
-import { collection, getDocs, addDoc, query, where, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, addDoc, query, where, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -22,8 +22,7 @@ function FindPartner() {
   const [loading, setLoading] = useState(true);
   const [userCoords, setUserCoords] = useState(null);
 
-  const userId = auth.currentUser?.uid;
-  console.log("Current User:", userId);
+  console.log("Loaded players from Firestore:", players);
 
   useEffect(() => {
     // Get browser geolocation coords
@@ -41,27 +40,34 @@ function FindPartner() {
       );
     }
 
-    const fetchCategoriesAndPlayers = async () => {
+    const fetchCategories = async () => {
       try {
         const catSnap = await getDocs(collection(db, "categories"));
         if (!catSnap.empty) {
           setGamesList(catSnap.docs.map((docSnap) => docSnap.data().name));
         }
-
-        const querySnapshot = await getDocs(collection(db, "players"));
-        const playersList = querySnapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-        setPlayers(playersList);
       } catch (error) {
-        console.error("Error loading partner finder data: ", error);
-        toast.error("Failed to load game partners.");
-      } finally {
-        setLoading(false);
+        console.error("Error loading categories: ", error);
       }
     };
-    fetchCategoriesAndPlayers();
+    fetchCategories();
+
+    const unsubscribePlayers = onSnapshot(collection(db, "players"), (snapshot) => {
+      const data = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      setPlayers(data);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error listening to players: ", error);
+      toast.error("Failed to load game partners.");
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribePlayers();
+    };
   }, []);
 
   const getDistance = (lat1, lon1, lat2, lon2) => {

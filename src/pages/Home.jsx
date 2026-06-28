@@ -67,27 +67,27 @@ function Home() {
       }
     };
 
-    // Load players
-    getDocs(collection(db, "players"))
-      .then((playersSnap) => {
-        const allPlayers = playersSnap.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-        const candidates = allPlayers.filter((p) => p.ownerId !== uid);
-        setNearbyPartners(candidates.slice(0, 3));
-        setStats((prev) => ({
-          ...prev,
-          activePartners: allPlayers.length,
-        }));
-        playersLoaded = true;
-        checkLoadingFinished();
-      })
-      .catch((err) => {
-        console.error("Error fetching players: ", err);
-        playersLoaded = true;
-        checkLoadingFinished();
-      });
+    // Real-time listener for players
+    const unsubscribePlayers = onSnapshot(collection(db, "players"), (playersSnap) => {
+      const allPlayers = playersSnap.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      console.log("Loaded players from Firestore:", allPlayers);
+      
+      const candidates = allPlayers.filter((p) => p.ownerId !== uid);
+      setNearbyPartners(candidates.slice(0, 3));
+      setStats((prev) => ({
+        ...prev,
+        activePartners: allPlayers.length,
+      }));
+      playersLoaded = true;
+      checkLoadingFinished();
+    }, (err) => {
+      console.error("Error listening to players: ", err);
+      playersLoaded = true;
+      checkLoadingFinished();
+    });
 
     // Load requests
     getDocs(query(collection(db, "requests"), where("receiverId", "==", uid)))
@@ -127,7 +127,10 @@ function Home() {
       checkLoadingFinished();
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribePlayers();
+      unsubscribe();
+    };
   }, [userId]);
 
   const handleDeleteSession = async (session) => {

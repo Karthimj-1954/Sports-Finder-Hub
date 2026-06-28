@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { games, locationTypes, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
 import { auth, db } from "../firebase";
-import { collection, query, where, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -171,8 +171,13 @@ function Profile() {
     const loadingToast = toast.loading("Saving profile...");
 
     try {
-      if (profileId) {
-        await updateDoc(doc(db, "players", profileId), profileData);
+      const q = query(collection(db, "players"), where("ownerId", "==", uid));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const docId = querySnapshot.docs[0].id;
+        await updateDoc(doc(db, "players", docId), profileData);
+        setProfileId(docId);
       } else {
         const docRef = await addDoc(collection(db, "players"), profileData);
         setProfileId(docRef.id);
@@ -184,6 +189,83 @@ function Profile() {
       toast.dismiss(loadingToast);
       console.error("Error saving profile: ", error);
       toast.error("Failed to save profile: " + error.message);
+    }
+  };
+
+  const deleteProfile = async () => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    if (!window.confirm("Are you sure you want to delete your sports partner profile? This action cannot be undone.")) {
+      return;
+    }
+
+    console.log("Deleting profile for user:", userId);
+    const loadingToast = toast.loading("Deleting profile...");
+
+    try {
+      const q = query(
+        collection(db, "players"),
+        where("ownerId", "==", userId)
+      );
+
+      const snapshot = await getDocs(q);
+
+      await Promise.all(
+        snapshot.docs.map((item) =>
+          deleteDoc(doc(db, "players", item.id))
+        )
+      );
+
+      // Clean up related match requests where this user is sender or receiver
+      const reqSenderQuery = query(collection(db, "requests"), where("senderId", "==", userId));
+      const reqReceiverQuery = query(collection(db, "requests"), where("receiverId", "==", userId));
+      const [senderSnap, receiverSnap] = await Promise.all([
+        getDocs(reqSenderQuery),
+        getDocs(reqReceiverQuery)
+      ]);
+      await Promise.all([
+        ...senderSnap.docs.map((item) => deleteDoc(doc(db, "requests", item.id))),
+        ...receiverSnap.docs.map((item) => deleteDoc(doc(db, "requests", item.id)))
+      ]);
+
+      // Clean up notifications for this user
+      const notificationsQuery = query(collection(db, "notifications"), where("userId", "==", userId));
+      const notificationsSnap = await getDocs(notificationsQuery);
+      await Promise.all(
+        notificationsSnap.docs.map((item) => deleteDoc(doc(db, "notifications", item.id)))
+      );
+
+      // Clear profile state variables
+      setProfileId(null);
+      setName("");
+      setAge("");
+      setGender("");
+      setGame("");
+      setSkill("");
+      setAvailabilityDays([]);
+      setAvailabilityPeriod("");
+      setPreferredTime("");
+      setRawTime("");
+      setLocation("");
+      setLocationType("");
+      setLatitude(0);
+      setLongitude(0);
+      setAbout("");
+      setExperience("");
+      setAchievements("");
+      setPhone("");
+      setInstagram("");
+      setProfileImage("");
+      setIsVerified(false);
+
+      toast.dismiss(loadingToast);
+      alert("Profile deleted successfully.");
+      navigate("/");
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error("Error deleting profile:", error);
+      toast.error("Failed to delete profile: " + error.message);
     }
   };
 
@@ -439,13 +521,22 @@ function Profile() {
             </div>
           </div>
 
-          <div className="pt-4 flex gap-4">
+          <div className="pt-4 flex flex-wrap gap-4">
             <button
               type="submit"
-              className="font-body font-semibold flex-1 bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 text-white py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-200 text-center text-sm"
+              className="font-body font-semibold flex-1 min-w-[150px] bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 text-white py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-200 text-center text-sm"
             >
               Save Profile
             </button>
+            {profileId && (
+              <button
+                type="button"
+                onClick={deleteProfile}
+                className="font-body font-semibold px-6 py-4 bg-red-150 hover:bg-red-200 text-red-750 border border-red-200 rounded-2xl transition duration-200 text-sm text-center"
+              >
+                🗑️ Delete Profile
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigate("/")}
