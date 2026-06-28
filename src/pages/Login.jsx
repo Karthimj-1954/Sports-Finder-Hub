@@ -13,7 +13,6 @@ import chess from "../assets/sports/chess.jpg";
 import carrom from "../assets/sports/carrom.jpg";
 import cards from "../assets/sports/cards.jpg";
 import tableTennis from "../assets/sports/table-tennis.jpg";
-import swimming from "../assets/sports/swimming.png";
 
 function Login() {
     const [email, setEmail] = useState("");
@@ -32,7 +31,6 @@ function Login() {
         carrom,
         cards,
         tableTennis,
-        swimming,
     ];
 
     const randomImage = useMemo(() => {
