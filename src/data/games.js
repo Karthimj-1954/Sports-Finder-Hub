@@ -9,6 +9,7 @@ export const games = [
     "Basketball",
     "Volleyball",
     "Tennis",
+    "Swimming",
 ];
 
 export const skillLevels = [

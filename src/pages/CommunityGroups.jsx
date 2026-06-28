@@ -189,7 +189,7 @@ function CommunityGroups() {
               <label className="font-body block text-sm font-semibold text-slate-600 mb-1">Group Name *</label>
               <input
                 type="text"
-                placeholder="e.g. Chess Club, Football Club"
+                placeholder="e.g. Swimming Club, Chess Club"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 className="font-body w-full border border-orange-100 p-3 bg-[#FFFDFB] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-sm"

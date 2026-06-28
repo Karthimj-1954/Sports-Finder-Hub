@@ -122,6 +122,7 @@ function PlayerDetails() {
     if (nameLower.includes("chess")) return "♟️";
     if (nameLower.includes("carrom")) return "🥏";
     if (nameLower.includes("table tennis")) return "🏓";
+    if (nameLower.includes("swimming")) return "🏊";
     return "🏃";
   };
 

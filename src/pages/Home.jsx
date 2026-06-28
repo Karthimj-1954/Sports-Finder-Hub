@@ -233,6 +233,10 @@ function Home() {
                 0%, 100% { transform: translate(0, 0) rotate(0deg); }
                 50% { transform: translate(10px, 8px) rotate(15deg); }
               }
+              @keyframes swim-stroke {
+                0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+                50% { transform: translate(12px, -6px) rotate(-10deg) scale(1.05); }
+              }
               .animate-card-1 {
                 animation: float-y-1 6s ease-in-out infinite;
               }
@@ -248,6 +252,9 @@ function Home() {
               .animate-elem-3 {
                 animation: float-random-3 10s ease-in-out infinite;
               }
+              .animate-swim {
+                animation: swim-stroke 5s ease-in-out infinite;
+              }
             `}</style>
 
             {/* Floating Sports Elements */}
@@ -255,6 +262,8 @@ function Home() {
             <div className="absolute bottom-6 right-8 text-4xl animate-elem-2 opacity-80 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]">🏸</div>
             <div className="absolute top-1/2 left-[42%] text-3xl animate-elem-3 opacity-90 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]">♟️</div>
             <div className="absolute top-10 right-4 text-2xl animate-elem-1 opacity-70 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]">🏀</div>
+            <div className="absolute bottom-[20%] left-[-20px] text-4xl animate-swim opacity-95 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.2)]">🏊</div>
+            <div className="absolute top-[20%] right-[30%] text-3xl animate-elem-1 opacity-75 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.15)]">🌊</div>
 
             {/* Indoor Games Card */}
             <div className="animate-card-1 w-full sm:w-[200px] bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-5 shadow-2xl hover:bg-white/15 hover:scale-105 hover:border-white/30 transition-all duration-300 cursor-pointer">
@@ -294,6 +303,7 @@ function Home() {
                   { icon: "🏀", name: "Basketball" },
                   { icon: "🎾", name: "Tennis" },
                   { icon: "🏐", name: "Volleyball" },
+                  { icon: "🏊", name: "Swimming" },
                 ].map((game, i) => (
                   <div
                     key={i}

@@ -17,6 +17,7 @@ function FindPartner() {
   const [availDay, setAvailDay] = useState("");
   const [availTime, setAvailTime] = useState("");
 
+  const [gamesList, setGamesList] = useState(games);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userCoords, setUserCoords] = useState(null);
@@ -40,8 +41,13 @@ function FindPartner() {
       );
     }
 
-    const fetchPlayers = async () => {
+    const fetchCategoriesAndPlayers = async () => {
       try {
+        const catSnap = await getDocs(collection(db, "categories"));
+        if (!catSnap.empty) {
+          setGamesList(catSnap.docs.map((docSnap) => docSnap.data().name));
+        }
+
         const querySnapshot = await getDocs(collection(db, "players"));
         const playersList = querySnapshot.docs.map((docSnap) => ({
           id: docSnap.id,
@@ -49,13 +55,13 @@ function FindPartner() {
         }));
         setPlayers(playersList);
       } catch (error) {
-        console.error("Error fetching players: ", error);
-        toast.error("Failed to load players.");
+        console.error("Error loading partner finder data: ", error);
+        toast.error("Failed to load game partners.");
       } finally {
         setLoading(false);
       }
     };
-    fetchPlayers();
+    fetchCategoriesAndPlayers();
   }, []);
 
   const getDistance = (lat1, lon1, lat2, lon2) => {
@@ -86,11 +92,13 @@ function FindPartner() {
         ?.toLowerCase()
         .includes(location.toLowerCase());
 
+    const searchNameLower = searchName.toLowerCase();
+    const isSwimKeyword = ["swim", "swimming", "aquatic"].includes(searchNameLower);
+
     const matchName =
       searchName === "" ||
-      player.name
-        ?.toLowerCase()
-        .includes(searchName.toLowerCase());
+      player.name?.toLowerCase().includes(searchNameLower) ||
+      (isSwimKeyword && (player.game?.toLowerCase() === "swimming" || player.sport?.toLowerCase() === "swimming"));
 
     const matchDay =
       availDay === "" ||
@@ -211,7 +219,7 @@ function FindPartner() {
             className="font-body font-normal w-full border border-orange-100 p-3 bg-[#FFFDFB] rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition text-sm"
           >
             <option value="">All Games</option>
-            {games.map((item) => (
+            {gamesList.map((item) => (
               <option key={item} value={item}>
                 {item}
               </option>

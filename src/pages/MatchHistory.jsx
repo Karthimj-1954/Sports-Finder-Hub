@@ -137,7 +137,7 @@ function MatchHistory() {
               <label className="font-body block text-sm font-semibold text-slate-600 mb-1">Game / Sport *</label>
               <input
                 type="text"
-                placeholder="e.g. Badminton, Football"
+                placeholder="e.g. Swimming, Badminton, Football"
                 value={game}
                 onChange={(e) => setGame(e.target.value)}
                 className="font-body w-full border border-orange-100 p-3 bg-[#FFFDFB] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-sm"
