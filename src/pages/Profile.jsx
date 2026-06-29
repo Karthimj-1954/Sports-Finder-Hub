@@ -67,9 +67,8 @@ function Profile() {
   const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      const uid = auth.currentUser?.uid;
-      if (!uid) {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (!user) {
         setLoading(false);
         return;
       }
@@ -80,7 +79,7 @@ function Profile() {
           setGamesList(catSnap.docs.map((docSnap) => docSnap.data().name));
         }
 
-        const q = query(collection(db, "players"), where("ownerId", "==", uid));
+        const q = query(collection(db, "players"), where("ownerId", "==", user.uid));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
           const docSnap = querySnapshot.docs[0];
@@ -115,8 +114,9 @@ function Profile() {
       } finally {
         setLoading(false);
       }
-    };
-    fetchProfile();
+    });
+
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {

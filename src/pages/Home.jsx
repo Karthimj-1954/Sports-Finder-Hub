@@ -53,85 +53,94 @@ function Home() {
       );
     }
 
-    const uid = auth.currentUser?.uid;
-    if (!uid) {
-      Promise.resolve().then(() => setLoading(false));
-      return;
-    }
+    let unsubscribePlayers = null;
+    let unsubscribePlayReq = null;
 
-    let playersLoaded = false;
-    let requestsLoaded = false;
-    let playRequestsLoaded = false;
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      if (unsubscribePlayers) unsubscribePlayers();
+      if (unsubscribePlayReq) unsubscribePlayReq();
 
-    const checkLoadingFinished = () => {
-      if (playersLoaded && requestsLoaded && playRequestsLoaded) {
+      if (!user) {
         setLoading(false);
+        return;
       }
-    };
 
-    // Real-time listener for players
-    const unsubscribePlayers = onSnapshot(collection(db, "players"), (playersSnap) => {
-      const allPlayers = playersSnap.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
-      setPlayers(allPlayers);
-      
-      const candidates = allPlayers.filter((p) => p.ownerId !== uid);
-      setNearbyPartners(candidates.slice(0, 3));
-      setStats((prev) => ({
-        ...prev,
-        activePartners: allPlayers.length,
-      }));
-      playersLoaded = true;
-      checkLoadingFinished();
-    }, (err) => {
-      console.error("Error listening to players: ", err);
-      playersLoaded = true;
-      checkLoadingFinished();
-    });
+      const uid = user.uid;
+      let playersLoaded = false;
+      let requestsLoaded = false;
+      let playRequestsLoaded = false;
 
-    // Load requests
-    getDocs(query(collection(db, "requests"), where("receiverId", "==", uid)))
-      .then((receivedSnap) => {
-        const allReceived = receivedSnap.docs.map((docSnap) => docSnap.data());
+      const checkLoadingFinished = () => {
+        if (playersLoaded && requestsLoaded && playRequestsLoaded) {
+          setLoading(false);
+        }
+      };
+
+      // Real-time listener for players
+      unsubscribePlayers = onSnapshot(collection(db, "players"), (playersSnap) => {
+        const allPlayers = playersSnap.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+        setPlayers(allPlayers);
+        
+        const candidates = allPlayers.filter((p) => p.ownerId !== uid);
+        setNearbyPartners(candidates.slice(0, 3));
         setStats((prev) => ({
           ...prev,
-          receivedRequests: allReceived.length,
-          acceptedMatches: allReceived.filter((req) => req.status === "Accepted").length,
+          activePartners: allPlayers.length,
         }));
-        requestsLoaded = true;
+        playersLoaded = true;
         checkLoadingFinished();
-      })
-      .catch((err) => {
-        console.error("Error fetching requests: ", err);
-        requestsLoaded = true;
+      }, (err) => {
+        console.error("Error listening to players: ", err);
+        playersLoaded = true;
         checkLoadingFinished();
       });
 
-    // Real-time listener for playRequests
-    const q = query(collection(db, "playRequests"), where("status", "==", "Open"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const sessionsList = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
-      setOpenSessions(sessionsList.slice(0, 3));
-      setStats((prev) => ({
-        ...prev,
-        openRequests: sessionsList.length,
-      }));
-      playRequestsLoaded = true;
-      checkLoadingFinished();
-    }, (error) => {
-      console.error("Error listing playRequests: ", error);
-      playRequestsLoaded = true;
-      checkLoadingFinished();
+      // Load requests
+      getDocs(query(collection(db, "requests"), where("receiverId", "==", uid)))
+        .then((receivedSnap) => {
+          const allReceived = receivedSnap.docs.map((docSnap) => docSnap.data());
+          setStats((prev) => ({
+            ...prev,
+            receivedRequests: allReceived.length,
+            acceptedMatches: allReceived.filter((req) => req.status === "Accepted").length,
+          }));
+          requestsLoaded = true;
+          checkLoadingFinished();
+        })
+        .catch((err) => {
+          console.error("Error fetching requests: ", err);
+          requestsLoaded = true;
+          checkLoadingFinished();
+        });
+
+      // Real-time listener for playRequests
+      const q = query(collection(db, "playRequests"), where("status", "==", "Open"));
+      unsubscribePlayReq = onSnapshot(q, (snapshot) => {
+        const sessionsList = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+        setOpenSessions(sessionsList.slice(0, 3));
+        setStats((prev) => ({
+          ...prev,
+          openRequests: sessionsList.length,
+        }));
+        playRequestsLoaded = true;
+        checkLoadingFinished();
+      }, (error) => {
+        console.error("Error listing playRequests: ", error);
+        playRequestsLoaded = true;
+        checkLoadingFinished();
+      });
     });
 
     return () => {
-      unsubscribePlayers();
-      unsubscribe();
+      unsubscribeAuth();
+      if (unsubscribePlayers) unsubscribePlayers();
+      if (unsubscribePlayReq) unsubscribePlayReq();
     };
   }, [userId]);
 
