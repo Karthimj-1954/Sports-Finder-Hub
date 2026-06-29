@@ -36,7 +36,8 @@ function Home() {
   const [players, setPlayers] = useState([]);
   const userId = auth.currentUser?.uid;
 
-  console.log("Home players from Firestore:", players);
+  console.log("Home loaded players:", players);
+  console.log("Current user:", auth.currentUser?.uid);
 
   useEffect(() => {
     // Get browser geolocation coords
@@ -85,8 +86,7 @@ function Home() {
         }));
         setPlayers(allPlayers);
         
-        const candidates = allPlayers.filter((p) => p.ownerId !== uid);
-        setNearbyPartners(candidates.slice(0, 3));
+        setNearbyPartners(allPlayers.slice(0, 3));
         setStats((prev) => ({
           ...prev,
           activePartners: allPlayers.length,
@@ -365,7 +365,7 @@ function Home() {
             </Link>
           </div>
 
-          {nearbyPartners.length === 0 ? (
+          {players.length === 0 ? (
             <div className="bg-[#FFF9F2]/50 border border-dashed border-orange-200 rounded-3xl p-8 text-center text-slate-400">
               <span className="text-3xl">🏃</span>
               <p className="font-body text-sm font-semibold mt-2">No nearby partners listed yet.</p>
@@ -376,6 +376,8 @@ function Home() {
                 const distance = userCoords && partner.latitude && partner.longitude
                   ? getDistance(userCoords.latitude, userCoords.longitude, partner.latitude, partner.longitude)
                   : null;
+
+                const playerSport = partner.sport || partner.game || "Not specified";
 
                 return (
                   <div
@@ -392,7 +394,7 @@ function Home() {
                         )}
                       </h4>
                       <p className="font-body text-sm text-slate-500 mt-1">
-                        🎮 {partner.game || partner.sport} | ⭐ {partner.skill || partner.skillLevel}
+                        🎮 Game: {playerSport} | ⭐ {partner.skill || partner.skillLevel}
                       </p>
                       <p className="font-body text-xs text-slate-455">
                         📍 {partner.location}
