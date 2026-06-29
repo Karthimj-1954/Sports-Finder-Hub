@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { games, locationTypes, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
 import { auth, db, storage } from "../firebase";
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, arrayRemove } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, arrayRemove, onSnapshot } from "firebase/firestore";
 import { deleteUser } from "firebase/auth";
 import { ref as storageRef, deleteObject } from "firebase/storage";
 import { toast } from "react-hot-toast";
@@ -37,13 +37,11 @@ function convert12HourTo24Hour(time12) {
 
 function Profile() {
   const navigate = useNavigate();
-
-  const userId = auth.currentUser?.uid;
-  console.log("Current User:", userId);
-  console.log("Current Profile State:", profile);
+  const user = auth.currentUser;
 
   const [profileId, setProfileId] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [gamesList, setGamesList] = useState(games);
@@ -67,6 +65,19 @@ function Profile() {
   const [latitude, setLatitude] = useState(0);
   const [longitude, setLongitude] = useState(0);
   const [isVerified, setIsVerified] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/login", { replace: true });
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      console.log("Current User:", user.uid);
+      console.log("onSnapshot available:", !!onSnapshot);
+    }
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -126,6 +137,10 @@ function Profile() {
       console.log("Active profile loaded for edit:", profile.name);
     }
   }, [profile]);
+
+  if (!user) {
+    return null;
+  }
 
   const toggleDay = (day) => {
     setAvailabilityDays((prev) =>
@@ -202,6 +217,67 @@ function Profile() {
       toast.dismiss(loadingToast);
       console.error("Error saving profile: ", error);
       toast.error("Failed to save profile: " + error.message);
+    }
+  };
+
+  const deleteProfileOnly = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    if (!window.confirm("Are you sure you want to delete your sports partner profile? This will delete your finder profile but keep your account active.")) {
+      return;
+    }
+
+    console.log("Deleting player profile only for:", user.uid);
+    const loadingToast = toast.loading("Deleting profile...");
+
+    try {
+      const q = query(
+        collection(db, "players"),
+        where("ownerId", "==", user.uid)
+      );
+
+      const snapshot = await getDocs(q);
+
+      await Promise.all(
+        snapshot.docs.map((item) =>
+          deleteDoc(doc(db, "players", item.id))
+        )
+      );
+
+      setProfileId(null);
+      setProfile(null);
+      setIsEditing(false);
+
+      // Reset form state
+      setName("");
+      setAge("");
+      setGender("");
+      setGame("");
+      setSkill("");
+      setAvailabilityDays([]);
+      setAvailabilityPeriod("");
+      setPreferredTime("");
+      setRawTime("");
+      setLocation("");
+      setLocationType("");
+      setLatitude(0);
+      setLongitude(0);
+      setAbout("");
+      setExperience("");
+      setAchievements("");
+      setPhone("");
+      setInstagram("");
+      setProfileImage("");
+      setIsVerified(false);
+
+      toast.dismiss(loadingToast);
+      toast.success("Player profile deleted successfully.");
+      navigate("/profile", { replace: true });
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error(error);
+      toast.error(error.message);
     }
   };
 
@@ -333,7 +409,7 @@ function Profile() {
       <div className="max-w-2xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
         <div className="flex flex-col items-center gap-2">
           <span className="text-3xl animate-spin">🔄</span>
-          Loading profile details...
+          Loading profile...
         </div>
       </div>
     );
@@ -342,269 +418,396 @@ function Profile() {
   return (
     <div className="max-w-2xl mx-auto mt-10 px-4 mb-20">
       <div className="bg-[#FFF9F2]/90 backdrop-blur-md border border-orange-100/50 p-8 rounded-3xl shadow-2xl text-slate-800">
-        <div className="mb-6">
-          <h1 className="font-heading text-3xl font-semibold tracking-tight text-slate-800">
-            Edit Player Profile
-          </h1>
-          <p className="font-body text-sm text-slate-500 mt-1">
-            Fill in your preferred games and availability to connect with local players.
-          </p>
-        </div>
-
-        <form onSubmit={saveProfile} className="space-y-6">
+        {profile && !isEditing ? (
           <div>
-            <label className="font-body font-medium block text-sm text-slate-700 mb-2">Full Name *</label>
-            <input
-              type="text"
-              placeholder="Enter your full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-              required
-            />
+            <div className="mb-6">
+              <h1 className="font-heading text-3xl font-semibold tracking-tight text-slate-800">
+                Player Profile Details
+              </h1>
+              <p className="font-body text-sm text-slate-500 mt-1">
+                Your current active sports partner profile on Sports Finder Hub.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center gap-4">
+                {profileImage ? (
+                  <img
+                    src={profileImage}
+                    alt="Profile"
+                    className="w-20 h-20 rounded-full object-cover border-2 border-orange-500 shadow-md"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 text-3xl font-bold shadow-md">
+                    {name ? name[0].toUpperCase() : "U"}
+                  </div>
+                )}
+                <div>
+                  <h2 className="font-heading text-2xl font-bold text-slate-800">{name}</h2>
+                  <p className="font-body text-sm text-slate-500">{gender || "Not specified"}{age ? `, ${age} years old` : ""}</p>
+                </div>
+              </div>
+
+              <hr className="border-orange-100/50" />
+
+              <div className="grid md:grid-cols-2 gap-4 text-sm font-body">
+                <div>
+                  <p className="text-slate-400 font-medium uppercase text-[10px]">Preferred Sport / Game</p>
+                  <p className="text-slate-800 font-semibold mt-0.5">{game || "Not specified"}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 font-medium uppercase text-[10px]">Skill Level</p>
+                  <p className="text-slate-800 font-semibold mt-0.5">{skill || "Not specified"}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 font-medium uppercase text-[10px]">Location Type</p>
+                  <p className="text-slate-800 font-semibold mt-0.5">{locationType || "Not specified"}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 font-medium uppercase text-[10px]">Location Name</p>
+                  <p className="text-slate-800 font-semibold mt-0.5">{location || "Not specified"}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 font-medium uppercase text-[10px]">Availability Days</p>
+                  <p className="text-slate-800 font-semibold mt-0.5">
+                    {availabilityDays && availabilityDays.length > 0 ? availabilityDays.join(", ") : "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400 font-medium uppercase text-[10px]">Availability Time</p>
+                  <p className="text-slate-800 font-semibold mt-0.5">
+                    {availabilityPeriod || "Not specified"} {preferredTime ? `(${preferredTime})` : ""}
+                  </p>
+                </div>
+              </div>
+
+              {about && (
+                <div>
+                  <p className="text-slate-400 font-medium uppercase text-[10px]">About Me</p>
+                  <p className="text-slate-700 mt-1 whitespace-pre-line text-sm">{about}</p>
+                </div>
+              )}
+
+              {experience && (
+                <div>
+                  <p className="text-slate-400 font-medium uppercase text-[10px]">Experience</p>
+                  <p className="text-slate-700 mt-1 whitespace-pre-line text-sm">{experience}</p>
+                </div>
+              )}
+
+              {achievements && (
+                <div>
+                  <p className="text-slate-400 font-medium uppercase text-[10px]">Achievements</p>
+                  <p className="text-slate-700 mt-1 whitespace-pre-line text-sm">{achievements}</p>
+                </div>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-4 text-sm font-body">
+                {phone && (
+                  <div>
+                    <p className="text-slate-400 font-medium uppercase text-[10px]">Phone</p>
+                    <p className="text-slate-800 font-semibold mt-0.5">{phone}</p>
+                  </div>
+                )}
+                {instagram && (
+                  <div>
+                    <p className="text-slate-400 font-medium uppercase text-[10px]">Instagram</p>
+                    <p className="text-slate-800 font-semibold mt-0.5">@{instagram}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 flex flex-wrap gap-4">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="font-body font-semibold flex-1 min-w-[120px] bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 text-white py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-200 text-center text-sm"
+                >
+                  ✏️ Edit Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={deleteProfileOnly}
+                  className="font-body font-semibold px-6 py-4 bg-red-100 hover:bg-red-200 text-red-700 border border-red-200 rounded-2xl transition duration-200 text-sm text-center"
+                >
+                  🗑️ Delete Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={deleteEntireAccount}
+                  className="font-body font-semibold px-6 py-4 bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-200 rounded-2xl transition duration-200 text-sm text-center"
+                >
+                  ⚠️ Delete Account
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Age</label>
-              <input
-                type="number"
-                placeholder="Enter your age"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-              />
-            </div>
-
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Gender</label>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-              >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-                <option value="Prefer Not to Say">Prefer Not to Say</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Preferred Game *</label>
-              <select
-                value={game}
-                onChange={(e) => setGame(e.target.value)}
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-                required
-              >
-                <option value="">Select Preferred Game</option>
-                {gamesList.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Skill Level *</label>
-              <select
-                value={skill}
-                onChange={(e) => setSkill(e.target.value)}
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-                required
-              >
-                <option value="">Select Skill Level</option>
-                {skillLevels.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
+        ) : (
           <div>
-            <label className="font-body font-medium block text-sm text-slate-700 mb-2">Available Days</label>
-            <div className="flex flex-wrap gap-2">
-              {DAYS_OF_WEEK.map((day) => {
-                const isSelected = availabilityDays.includes(day);
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => toggleDay(day)}
-                    className={`font-body font-semibold py-2.5 px-4 rounded-xl text-xs border transition duration-200 ${
-                      isSelected
-                        ? "bg-orange-600 border-orange-600 text-white shadow"
-                        : "bg-orange-50/50 border-orange-100 text-orange-800 hover:bg-orange-100"
-                    }`}
+            <div className="mb-6">
+              <h1 className="font-heading text-3xl font-semibold tracking-tight text-slate-800">
+                {profileId ? "Edit Player Profile" : "Create Player Profile"}
+              </h1>
+              <p className="font-body text-sm text-slate-500 mt-1">
+                {profileId
+                  ? "Fill in your preferred games and availability to connect with local players."
+                  : "Set up your preferred games and availability to start connecting with local players."}
+              </p>
+            </div>
+
+            <form onSubmit={saveProfile} className="space-y-6">
+              <div>
+                <label className="font-body font-medium block text-sm text-slate-700 mb-2">Full Name *</label>
+                <input
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                  required
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Age</label>
+                  <input
+                    type="number"
+                    placeholder="Enter your age"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Gender</label>
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
                   >
-                    {day}
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                    <option value="Prefer Not to Say">Prefer Not to Say</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Preferred Game *</label>
+                  <select
+                    value={game}
+                    onChange={(e) => setGame(e.target.value)}
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                    required
+                  >
+                    <option value="">Select Preferred Game</option>
+                    {gamesList.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Skill Level *</label>
+                  <select
+                    value={skill}
+                    onChange={(e) => setSkill(e.target.value)}
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                    required
+                  >
+                    <option value="">Select Skill Level</option>
+                    {skillLevels.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-body font-medium block text-sm text-slate-700 mb-2">Availability Days</label>
+                <div className="flex flex-wrap gap-3">
+                  {DAYS_OF_WEEK.map((day) => {
+                    const isSelected = availabilityDays.includes(day);
+                    return (
+                      <button
+                        type="button"
+                        key={day}
+                        onClick={() => toggleDay(day)}
+                        className={`font-body text-xs font-semibold px-4 py-2 rounded-xl transition duration-200 ${
+                          isSelected
+                            ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md"
+                            : "bg-[#FFF9F2]/75 hover:bg-orange-50 text-slate-600 border border-orange-100/50"
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Availability Period</label>
+                  <select
+                    value={availabilityPeriod}
+                    onChange={(e) => setAvailabilityPeriod(e.target.value)}
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                  >
+                    <option value="">Select Availability Period</option>
+                    <option value="Morning">Morning</option>
+                    <option value="Afternoon">Afternoon</option>
+                    <option value="Evening">Evening</option>
+                    <option value="Night">Night</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Preferred Time</label>
+                  <input
+                    type="time"
+                    value={rawTime}
+                    onChange={(e) => {
+                      setRawTime(e.target.value);
+                      setPreferredTime(formatTimeTo12Hour(e.target.value));
+                    }}
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Location Type *</label>
+                  <select
+                    value={locationType}
+                    onChange={(e) => setLocationType(e.target.value)}
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                    required
+                  >
+                    <option value="">Select Location Type</option>
+                    {locationTypes.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Location Name *</label>
+                  <LocationNameMap
+                    value={location}
+                    onChange={(val, lat, lng) => {
+                      setLocation(val);
+                      if (lat !== undefined) setLatitude(lat);
+                      if (lng !== undefined) setLongitude(lng);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-body font-medium block text-sm text-slate-700 mb-2">About Me</label>
+                <textarea
+                  placeholder="Tell other players a bit about yourself, your style, etc..."
+                  value={about}
+                  onChange={(e) => setAbout(e.target.value)}
+                  rows="4"
+                  className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Experience</label>
+                  <textarea
+                    placeholder="Describe your playing history/experience..."
+                    value={experience}
+                    onChange={(e) => setExperience(e.target.value)}
+                    rows="3"
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Achievements</label>
+                  <textarea
+                    placeholder="Mention any tournament titles, achievements, or honors..."
+                    value={achievements}
+                    onChange={(e) => setAchievements(e.target.value)}
+                    rows="3"
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. +91 9876543210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-body font-medium block text-sm text-slate-700 mb-2">Instagram Username</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. handle_name (without @)"
+                    value={instagram}
+                    onChange={(e) => setInstagram(e.target.value)}
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex flex-wrap gap-4">
+                <button
+                  type="submit"
+                  className="font-body font-semibold flex-1 min-w-[150px] bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 text-white py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-200 text-center text-sm"
+                >
+                  Save Profile
+                </button>
+                {profileId && (
+                  <button
+                    type="button"
+                    onClick={deleteEntireAccount}
+                    className="font-body font-semibold px-6 py-4 bg-red-100 hover:bg-red-200 text-red-750 border border-red-200 rounded-2xl transition duration-200 text-sm text-center"
+                  >
+                    🗑️ Delete Account
                   </button>
-                );
-              })}
-            </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (profile) {
+                      setIsEditing(false);
+                    } else {
+                      navigate("/");
+                    }
+                  }}
+                  className="font-body font-semibold px-6 py-4 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-2xl transition duration-200 text-sm text-center"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Availability Period *</label>
-              <select
-                value={availabilityPeriod}
-                onChange={(e) => setAvailabilityPeriod(e.target.value)}
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-                required
-              >
-                <option value="">Select Availability Period</option>
-                <option value="Morning">Morning</option>
-                <option value="Afternoon">Afternoon</option>
-                <option value="Evening">Evening</option>
-                <option value="Night">Night</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Preferred Time *</label>
-              <input
-                type="time"
-                value={rawTime}
-                onChange={(e) => {
-                  setRawTime(e.target.value);
-                  setPreferredTime(formatTimeTo12Hour(e.target.value));
-                }}
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Playing Location *</label>
-              <input
-                type="text"
-                placeholder="Enter city or neighborhood"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-                required
-              />
-              <LocationNameMap
-                locationName={location}
-                onCoordsResolved={(lat, lon) => {
-                  setLatitude(lat);
-                  setLongitude(lon);
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Playing Location Type *</label>
-              <select
-                value={locationType}
-                onChange={(e) => setLocationType(e.target.value)}
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-                required
-              >
-                <option value="">Select Location Type</option>
-                {locationTypes.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="font-body font-medium block text-sm text-slate-700 mb-2">About Me</label>
-            <textarea
-              placeholder="Tell other players a bit about yourself, your playstyle, or equipment..."
-              value={about}
-              onChange={(e) => setAbout(e.target.value)}
-              rows="4"
-              className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-            />
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Experience</label>
-              <textarea
-                placeholder="Describe your playing history/experience..."
-                value={experience}
-                onChange={(e) => setExperience(e.target.value)}
-                rows="3"
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-              />
-            </div>
-
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Achievements</label>
-              <textarea
-                placeholder="Mention any tournament titles, achievements, or honors..."
-                value={achievements}
-                onChange={(e) => setAchievements(e.target.value)}
-                rows="3"
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-              />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Phone Number</label>
-              <input
-                type="tel"
-                placeholder="e.g. +91 9876543210"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-              />
-            </div>
-
-            <div>
-              <label className="font-body font-medium block text-sm text-slate-700 mb-2">Instagram Username</label>
-              <input
-                type="text"
-                placeholder="e.g. handle_name (without @)"
-                value={instagram}
-                onChange={(e) => setInstagram(e.target.value)}
-                className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 flex flex-wrap gap-4">
-            <button
-              type="submit"
-              className="font-body font-semibold flex-1 min-w-[150px] bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-700 hover:to-amber-800 text-white py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition duration-200 text-center text-sm"
-            >
-              Save Profile
-            </button>
-            {profileId && (
-              <button
-                type="button"
-                onClick={deleteEntireAccount}
-                className="font-body font-semibold px-6 py-4 bg-red-100 hover:bg-red-200 text-red-750 border border-red-200 rounded-2xl transition duration-200 text-sm text-center"
-              >
-                🗑️ Delete Account
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="font-body font-semibold px-6 py-4 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-2xl transition duration-200 text-sm text-center"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        )}
       </div>
     </div>
   );
