@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { games, locationTypes, skillLevels } from "../data/games";
 import LocationNameMap from "../components/LocationNameMap";
-import { auth, db } from "../firebase";
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { auth, db, storage } from "../firebase";
+import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, arrayRemove } from "firebase/firestore";
+import { deleteUser } from "firebase/auth";
+import { ref as storageRef, deleteObject } from "firebase/storage";
 import { toast } from "react-hot-toast";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -203,51 +205,89 @@ function Profile() {
     }
   };
 
-  const deleteProfile = async () => {
+  const deleteEntireAccount = async () => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
 
-    if (!window.confirm("Are you sure you want to delete your sports partner profile? This action cannot be undone.")) {
+    if (!window.confirm("Are you sure? This action will permanently delete your account and all associated data.")) {
       return;
     }
 
-    console.log("Deleting player profile for:", userId);
-    const loadingToast = toast.loading("Deleting profile...");
+    console.log("Deleting complete account:", userId);
+    const loadingToast = toast.loading("Deleting entire account...");
 
     try {
-      const q = query(
-        collection(db, "players"),
-        where("ownerId", "==", userId)
-      );
-
-      const snapshot = await getDocs(q);
-
-      await Promise.all(
-        snapshot.docs.map((item) =>
-          deleteDoc(doc(db, "players", item.id))
-        )
-      );
-
-      // Clean up related match requests where this user is sender or receiver
+      // 1. Fetch all Firestore documents that need to be deleted
+      const playersQuery = query(collection(db, "players"), where("ownerId", "==", userId));
+      const playReqQuery = query(collection(db, "playRequests"), where("creatorId", "==", userId));
       const reqSenderQuery = query(collection(db, "requests"), where("senderId", "==", userId));
       const reqReceiverQuery = query(collection(db, "requests"), where("receiverId", "==", userId));
-      const [senderSnap, receiverSnap] = await Promise.all([
-        getDocs(reqSenderQuery),
-        getDocs(reqReceiverQuery)
-      ]);
-      await Promise.all([
-        ...senderSnap.docs.map((item) => deleteDoc(doc(db, "requests", item.id))),
-        ...receiverSnap.docs.map((item) => deleteDoc(doc(db, "requests", item.id)))
-      ]);
-
-      // Clean up notifications for this user
       const notificationsQuery = query(collection(db, "notifications"), where("userId", "==", userId));
-      const notificationsSnap = await getDocs(notificationsQuery);
-      await Promise.all(
-        notificationsSnap.docs.map((item) => deleteDoc(doc(db, "notifications", item.id)))
-      );
+      const historyQuery = query(collection(db, "history"), where("userId", "==", userId));
 
-      // Clear profile state variables
+      const [
+        playersSnap,
+        playReqSnap,
+        senderSnap,
+        receiverSnap,
+        notificationsSnap,
+        historySnap
+      ] = await Promise.all([
+        getDocs(playersQuery),
+        getDocs(playReqQuery),
+        getDocs(reqSenderQuery),
+        getDocs(reqReceiverQuery),
+        getDocs(notificationsQuery),
+        getDocs(historyQuery)
+      ]);
+
+      const userDocRef = doc(db, "users", userId);
+      const deletePromises = [
+        ...playersSnap.docs.map((d) => deleteDoc(doc(db, "players", d.id))),
+        ...playReqSnap.docs.map((d) => deleteDoc(doc(db, "playRequests", d.id))),
+        ...senderSnap.docs.map((d) => deleteDoc(doc(db, "requests", d.id))),
+        ...receiverSnap.docs.map((d) => deleteDoc(doc(db, "requests", d.id))),
+        ...notificationsSnap.docs.map((d) => deleteDoc(doc(db, "notifications", d.id))),
+        ...historySnap.docs.map((d) => deleteDoc(doc(db, "history", d.id))),
+        deleteDoc(userDocRef)
+      ];
+
+      // 2. Fetch communities to update membership or delete
+      const communitiesSnap = await getDocs(collection(db, "communities"));
+      communitiesSnap.forEach((communityDoc) => {
+        const commData = communityDoc.data();
+        if (commData.createdBy === userId) {
+          deletePromises.push(deleteDoc(doc(db, "communities", communityDoc.id)));
+        } else if (commData.members && commData.members.includes(userId)) {
+          deletePromises.push(updateDoc(doc(db, "communities", communityDoc.id), {
+            members: arrayRemove(userId)
+          }));
+        }
+      });
+
+      // 3. Delete profile image from Firebase Storage if it exists
+      if (profileImage && profileImage.includes("firebasestorage.googleapis.com")) {
+        try {
+          const storageRefObj = storageRef(storage, profileImage);
+          deletePromises.push(deleteObject(storageRefObj));
+        } catch (storageErr) {
+          console.warn("Storage deletion error ignored: ", storageErr.message);
+        }
+      }
+
+      // Execute all database/storage updates
+      await Promise.all(deletePromises);
+
+      // 4. Delete user authentication account
+      const authUser = auth.currentUser;
+      if (authUser) {
+        await deleteUser(authUser);
+      }
+
+      toast.dismiss(loadingToast);
+      toast.success("Account and all associated data deleted successfully.");
+
+      // 5. Clear state variables
       setProfileId(null);
       setProfile(null);
       setName("");
@@ -271,13 +311,20 @@ function Profile() {
       setProfileImage("");
       setIsVerified(false);
 
-      toast.dismiss(loadingToast);
-      toast.success("Profile deleted successfully.");
-      navigate("/");
+      // 6. Clear local/session cache and sign out
+      localStorage.clear();
+      sessionStorage.clear();
+      await auth.signOut();
+      navigate("/login");
+
     } catch (error) {
       toast.dismiss(loadingToast);
-      console.error("Error deleting profile:", error);
-      toast.error("Failed to delete profile: " + error.message);
+      console.error("Error deleting complete account:", error);
+      if (error.code === "auth/requires-recent-login") {
+        toast.error("Please re-authenticate (log out and log back in) before deleting your account.");
+      } else {
+        toast.error("Failed to delete account: " + error.message);
+      }
     }
   };
 
@@ -543,10 +590,10 @@ function Profile() {
             {profileId && (
               <button
                 type="button"
-                onClick={deleteProfile}
-                className="font-body font-semibold px-6 py-4 bg-red-150 hover:bg-red-200 text-red-750 border border-red-200 rounded-2xl transition duration-200 text-sm text-center"
+                onClick={deleteEntireAccount}
+                className="font-body font-semibold px-6 py-4 bg-red-100 hover:bg-red-200 text-red-750 border border-red-200 rounded-2xl transition duration-200 text-sm text-center"
               >
-                🗑️ Delete Profile
+                🗑️ Delete Account
               </button>
             )}
             <button
