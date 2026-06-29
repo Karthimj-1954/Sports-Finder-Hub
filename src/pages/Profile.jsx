@@ -699,12 +699,19 @@ function Profile() {
 
                 <div>
                   <label className="font-body font-medium block text-sm text-slate-700 mb-2">Location Name *</label>
-                  <LocationNameMap
+                  <input
+                    type="text"
+                    placeholder="e.g. Community Center or Local Ground"
                     value={location}
-                    onChange={(val, lat, lng) => {
-                      setLocation(val);
-                      if (lat !== undefined) setLatitude(lat);
-                      if (lng !== undefined) setLongitude(lng);
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="font-body font-normal w-full p-4 border border-orange-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200 mb-2"
+                    required
+                  />
+                  <LocationNameMap
+                    locationName={location}
+                    onCoordsResolved={(lat, lng) => {
+                      setLatitude(lat);
+                      setLongitude(lng);
                     }}
                   />
                 </div>

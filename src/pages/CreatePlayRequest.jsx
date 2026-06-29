@@ -131,13 +131,13 @@ function CreatePlayRequest() {
           </div>
 
           <div>
-            <label className="font-body font-medium block text-sm text-slate-700 mb-1.5">Location *</label>
+            <label className="font-body font-medium block text-sm text-slate-700 mb-1.5">Location Name *</label>
             <input
               type="text"
               placeholder="e.g. Community Center or Local Ground"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200"
+              className="font-body font-normal w-full p-3.5 border border-orange-100 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-[#FFFDFB] transition duration-200 mb-2"
               required
             />
             <LocationNameMap
