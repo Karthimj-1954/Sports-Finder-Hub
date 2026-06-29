@@ -5,6 +5,7 @@ import LocationNameMap from "../components/LocationNameMap";
 import { auth, db } from "../firebase";
 import { collection, addDoc, getDocs, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-hot-toast";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 function formatTimeTo12Hour(time24) {
   if (!time24) return "";
@@ -32,6 +33,7 @@ function CreatePlayRequest() {
   const [skill, setSkill] = useState("");
   const [latitude, setLatitude] = useState(0);
   const [longitude, setLongitude] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -42,10 +44,16 @@ function CreatePlayRequest() {
         }
       } catch (error) {
         console.error("Error fetching categories: ", error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchCategories();
   }, []);
+
+  if (loading) {
+    return <LoadingSpinner text="Preparing play session..." />;
+  }
 
   const createRequest = async (e) => {
     e.preventDefault();

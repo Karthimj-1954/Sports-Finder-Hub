@@ -4,6 +4,7 @@ import LocationNameMap from "../components/LocationNameMap";
 import { auth, db } from "../firebase";
 import { doc, getDoc, addDoc, query, collection, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-hot-toast";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 function PlayerDetails() {
   const { id } = useParams();
@@ -93,14 +94,7 @@ function PlayerDetails() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-3xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-3xl animate-spin">🔄</span>
-          Loading partner profile...
-        </div>
-      </div>
-    );
+    return <LoadingSpinner text="Loading partner profile..." />;
   }
 
   if (!player) return null;

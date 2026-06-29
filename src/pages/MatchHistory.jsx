@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { auth, db } from "../firebase";
 import { collection, getDocs, addDoc, query, where } from "firebase/firestore";
 import { toast } from "react-hot-toast";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 function MatchHistory() {
   const [matches, setMatches] = useState([]);
@@ -87,14 +88,7 @@ function MatchHistory() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-3xl animate-spin">🔄</span>
-          Loading match history...
-        </div>
-      </div>
-    );
+    return <LoadingSpinner text="Loading match history..." />;
   }
 
   return (

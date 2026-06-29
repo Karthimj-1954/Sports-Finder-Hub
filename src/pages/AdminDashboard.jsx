@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { auth, db } from "../firebase";
 import { collection, deleteDoc, doc, updateDoc, addDoc, onSnapshot } from "firebase/firestore";
 import { toast } from "react-hot-toast";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 // Chart.js registration
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from "chart.js";
@@ -320,14 +321,7 @@ function AdminDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-3xl animate-spin">🔄</span>
-          Loading dashboard...
-        </div>
-      </div>
-    );
+    return <LoadingSpinner text="Loading dashboard..." />;
   }
 
   return (

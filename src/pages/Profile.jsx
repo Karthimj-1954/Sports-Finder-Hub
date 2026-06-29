@@ -7,6 +7,7 @@ import { collection, query, where, getDocs, addDoc, updateDoc, doc, deleteDoc, a
 import { deleteUser } from "firebase/auth";
 import { ref as storageRef, deleteObject } from "firebase/storage";
 import { toast } from "react-hot-toast";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -405,14 +406,7 @@ function Profile() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-2xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-3xl animate-spin">🔄</span>
-          Loading profile...
-        </div>
-      </div>
-    );
+    return <LoadingSpinner text="Loading your profile..." />;
   }
 
   return (

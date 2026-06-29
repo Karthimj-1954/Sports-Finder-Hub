@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { auth, db } from "../firebase";
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { toast } from "react-hot-toast";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 function CommunityGroups() {
   const [groups, setGroups] = useState([]);
@@ -150,14 +151,7 @@ function CommunityGroups() {
   });
 
   if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-3xl animate-spin">🔄</span>
-          Loading community groups...
-        </div>
-      </div>
-    );
+    return <LoadingSpinner text="Loading communities..." />;
   }
 
   return (

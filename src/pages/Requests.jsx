@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { auth, db } from "../firebase";
 import { collection, query, where, getDocs, updateDoc, doc, deleteDoc, addDoc } from "firebase/firestore";
 import { toast } from "react-hot-toast";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 function Requests() {
   const [receivedRequests, setReceivedRequests] = useState([]);
@@ -162,14 +163,7 @@ function Requests() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-5xl mx-auto mt-20 p-8 bg-[#FFF9F2]/90 rounded-3xl shadow-xl text-center font-body text-slate-500">
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-3xl animate-spin">🔄</span>
-          Loading play requests...
-        </div>
-      </div>
-    );
+    return <LoadingSpinner text="Loading play requests..." />;
   }
 
   return (
