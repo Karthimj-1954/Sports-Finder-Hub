@@ -32,8 +32,10 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [userCoords, setUserCoords] = useState(null);
 
+  const [players, setPlayers] = useState([]);
   const userId = auth.currentUser?.uid;
-  console.log("Current User:", userId);
+
+  console.log("Home players from Firestore:", players);
 
   useEffect(() => {
     // Get browser geolocation coords
@@ -73,7 +75,7 @@ function Home() {
         id: docSnap.id,
         ...docSnap.data(),
       }));
-      console.log("Loaded players from Firestore:", allPlayers);
+      setPlayers(allPlayers);
       
       const candidates = allPlayers.filter((p) => p.ownerId !== uid);
       setNearbyPartners(candidates.slice(0, 3));
@@ -327,7 +329,7 @@ function Home() {
         <div className="bg-[#FFF9F2]/80 border border-orange-100/50 p-6 rounded-2xl shadow-md text-center">
           <span className="text-2xl">👥</span>
           <h3 className="font-body text-xs font-semibold text-slate-400 uppercase tracking-wider mt-2">Active Partners</h3>
-          <p className="font-heading text-3xl font-extrabold text-slate-800 mt-1">{stats.activePartners}</p>
+          <p className="font-heading text-3xl font-extrabold text-slate-800 mt-1">{players.length}</p>
         </div>
 
         <div className="bg-[#FFF9F2]/80 border border-orange-100/50 p-6 rounded-2xl shadow-md text-center">

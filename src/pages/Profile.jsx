@@ -38,8 +38,10 @@ function Profile() {
 
   const userId = auth.currentUser?.uid;
   console.log("Current User:", userId);
+  console.log("Current Profile State:", profile);
 
   const [profileId, setProfileId] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [gamesList, setGamesList] = useState(games);
@@ -84,6 +86,7 @@ function Profile() {
           const docSnap = querySnapshot.docs[0];
           const data = docSnap.data();
           setProfileId(docSnap.id);
+          setProfile(data);
           setName(data.name || "");
           setAge(data.age || "");
           setGender(data.gender || "");
@@ -115,6 +118,12 @@ function Profile() {
     };
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (profile) {
+      console.log("Active profile loaded for edit:", profile.name);
+    }
+  }, [profile]);
 
   const toggleDay = (day) => {
     setAvailabilityDays((prev) =>
@@ -178,9 +187,11 @@ function Profile() {
         const docId = querySnapshot.docs[0].id;
         await updateDoc(doc(db, "players", docId), profileData);
         setProfileId(docId);
+        setProfile(profileData);
       } else {
         const docRef = await addDoc(collection(db, "players"), profileData);
         setProfileId(docRef.id);
+        setProfile(profileData);
       }
       toast.dismiss(loadingToast);
       toast.success("Profile saved successfully!");
@@ -200,7 +211,7 @@ function Profile() {
       return;
     }
 
-    console.log("Deleting profile for user:", userId);
+    console.log("Deleting player profile for:", userId);
     const loadingToast = toast.loading("Deleting profile...");
 
     try {
@@ -238,6 +249,7 @@ function Profile() {
 
       // Clear profile state variables
       setProfileId(null);
+      setProfile(null);
       setName("");
       setAge("");
       setGender("");
@@ -260,7 +272,7 @@ function Profile() {
       setIsVerified(false);
 
       toast.dismiss(loadingToast);
-      alert("Profile deleted successfully.");
+      toast.success("Profile deleted successfully.");
       navigate("/");
     } catch (error) {
       toast.dismiss(loadingToast);

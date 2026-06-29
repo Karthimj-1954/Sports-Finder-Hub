@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PageLayout from "./components/PageLayout";
@@ -18,6 +19,13 @@ import CommunityGroups from "./pages/CommunityGroups";
 import MatchHistory from "./pages/MatchHistory";
 
 function App() {
+  useEffect(() => {
+    localStorage.removeItem("players");
+    localStorage.removeItem("playRequests");
+    localStorage.removeItem("requests");
+    localStorage.removeItem("acceptedRequests");
+  }, []);
+
   return (
     <>
       <Toaster position="top-center" reverseOrder={false} />
